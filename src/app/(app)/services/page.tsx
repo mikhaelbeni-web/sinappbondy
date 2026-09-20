@@ -1,11 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  parseISO,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
+import { fr } from "date-fns/locale";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 
 const TYPE_LABELS: Record<string, string> = { shabbat: "Shabbat", fete: "Fête", autre: "Autre" };
+const TYPE_DOT: Record<string, string> = { shabbat: "bg-gold", fete: "bg-ink", autre: "bg-gray-400" };
+const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 export default function ServicesPage() {
   const { can } = useAuth();
@@ -15,10 +32,14 @@ export default function ServicesPage() {
   const [form, setForm] = useState({ date: "", type: "shabbat", label: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showList, setShowList] = useState(false);
 
   const [importYear, setImportYear] = useState(new Date().getFullYear());
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState("");
+
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -75,6 +96,24 @@ export default function ServicesPage() {
       setImporting(false);
     }
   }
+
+  const byDate = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const s of services) {
+      const list = map.get(s.date) || [];
+      list.push(s);
+      map.set(s.date, list);
+    }
+    return map;
+  }, [services]);
+
+  const calendarDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [month]);
+
+  const selectedServices = selectedDay ? byDate.get(selectedDay) || [] : [];
 
   return (
     <div className="space-y-6">
@@ -138,18 +177,113 @@ export default function ServicesPage() {
         </form>
       )}
 
-      <div className="card divide-y">
-        {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
-        {!loading && services.length === 0 && <p className="p-4 text-sm text-gray-500">Aucun office créé.</p>}
-        {services.map((s) => (
-          <Link key={s.id} href={`/services/${s.id}`} className="flex items-center justify-between p-4 hover:bg-gray-50">
-            <div>
-              <p className="font-medium text-ink">{s.label}</p>
-              <p className="text-sm text-gray-500">{formatDate(s.date)} · {TYPE_LABELS[s.type] || s.type}</p>
-            </div>
-            <span className="text-gold text-sm">Voir →</span>
-          </Link>
-        ))}
+      {/* Calendrier */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => setMonth((m) => subMonths(m, 1))} className="btn-secondary px-3 py-1.5">
+            ← Précédent
+          </button>
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-ink capitalize">{format(month, "MMMM yyyy", { locale: fr })}</h2>
+            <button onClick={() => setMonth(startOfMonth(new Date()))} className="text-xs text-gold hover:underline">
+              Aujourd'hui
+            </button>
+          </div>
+          <button onClick={() => setMonth((m) => addMonths(m, 1))} className="btn-secondary px-3 py-1.5">
+            Suivant →
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
+          {WEEKDAYS.map((d) => (
+            <div key={d} className="py-1">{d}</div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDays.map((day) => {
+            const dateStr = format(day, "yyyy-MM-dd");
+            const dayServices = byDate.get(dateStr) || [];
+            const inMonth = isSameMonth(day, month);
+            const today = isToday(day);
+            const selected = selectedDay === dateStr;
+            return (
+              <button
+                key={dateStr}
+                onClick={() => setSelectedDay(selected ? null : dateStr)}
+                className={`min-h-[76px] rounded-md border p-1.5 text-left align-top transition-colors ${
+                  inMonth ? "bg-white" : "bg-gray-50 text-gray-300"
+                } ${today ? "border-gold" : "border-gray-100"} ${selected ? "ring-2 ring-gold" : ""} hover:bg-cream`}
+              >
+                <div className={`text-xs ${today ? "font-bold text-gold" : inMonth ? "text-gray-600" : "text-gray-300"}`}>
+                  {format(day, "d")}
+                </div>
+                <div className="mt-1 space-y-0.5">
+                  {dayServices.slice(0, 2).map((s) => (
+                    <div key={s.id} className="flex items-center gap-1">
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${TYPE_DOT[s.type] || "bg-gray-400"}`} />
+                      <span className="truncate text-[11px] leading-tight text-ink">{s.label}</span>
+                    </div>
+                  ))}
+                  {dayServices.length > 2 && (
+                    <div className="text-[10px] text-gray-400">+{dayServices.length - 2} autre(s)</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gold" /> Shabbat</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ink" /> Fête</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-400" /> Autre</span>
+        </div>
+      </div>
+
+      {/* Détail du jour sélectionné */}
+      {selectedDay && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-ink">{formatDate(selectedDay)}</h3>
+            <button onClick={() => setSelectedDay(null)} className="text-xs text-gray-400 hover:text-ink">Fermer</button>
+          </div>
+          {selectedServices.length === 0 && <p className="text-sm text-gray-500">Aucun office ce jour-là.</p>}
+          <div className="divide-y">
+            {selectedServices.map((s) => (
+              <Link key={s.id} href={`/services/${s.id}`} className="flex items-center justify-between py-2 hover:bg-gray-50 text-sm">
+                <span className="text-ink">{s.label}</span>
+                <span className="text-gray-500">{TYPE_LABELS[s.type] || s.type} · <span className="text-gold">Voir →</span></span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Liste complète, repliable */}
+      <div className="card">
+        <button
+          onClick={() => setShowList((s) => !s)}
+          className="w-full flex items-center justify-between p-4 text-sm font-medium text-ink"
+        >
+          Liste complète ({services.length})
+          <span className="text-gray-400">{showList ? "▲" : "▼"}</span>
+        </button>
+        {showList && (
+          <div className="divide-y border-t">
+            {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
+            {!loading && services.length === 0 && <p className="p-4 text-sm text-gray-500">Aucun office créé.</p>}
+            {services.map((s) => (
+              <Link key={s.id} href={`/services/${s.id}`} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                <div>
+                  <p className="font-medium text-ink">{s.label}</p>
+                  <p className="text-sm text-gray-500">{formatDate(s.date)} · {TYPE_LABELS[s.type] || s.type}</p>
+                </div>
+                <span className="text-gold text-sm">Voir →</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
