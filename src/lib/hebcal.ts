@@ -24,7 +24,7 @@ export async function fetchHebrewCalendar(year: number): Promise<HebcalService[]
     cfg: "json",
     year: String(year),
     month: "x", // toute l'année
-    ss: "on", // Shabbat / Parachat hashavoua
+    s: "on", // Chabbat / Parachat hashavoua (chaque semaine — à ne pas confondre avec "ss", qui ne renvoie que les Chabbatot spéciaux)
     maj: "on", // fêtes majeures (Roch Hachana, Kippour, Souccot, Pessah, Chavouot...)
     mf: "on", // jeûnes mineurs (Tsom Guedalia, Ta'anit Esther...)
     i: "off", // diaspora (2 jours de Yom Tov), pas le calendrier d'Israël
