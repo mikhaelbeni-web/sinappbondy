@@ -16,6 +16,10 @@ export default function ServicesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [importYear, setImportYear] = useState(new Date().getFullYear());
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
+
   async function load() {
     setLoading(true);
     const res = await fetch("/api/services");
@@ -50,6 +54,28 @@ export default function ServicesPage() {
     }
   }
 
+  async function handleImport() {
+    setImporting(true);
+    setImportMessage("");
+    try {
+      const res = await fetch("/api/services/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year: importYear }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setImportMessage(
+        `${data.created} office(s) ajouté(s), ${data.skipped} déjà présent(s) (sur ${data.total} dates ${importYear}).`
+      );
+      await load();
+    } catch (err: any) {
+      setImportMessage(err.message);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -60,6 +86,26 @@ export default function ServicesPage() {
           </button>
         )}
       </div>
+
+      {can("gerer_offices") && (
+        <div className="card p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="label">Importer le calendrier hébraïque (Shabbat + fêtes, Paris)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                className="input w-28"
+                value={importYear}
+                onChange={(e) => setImportYear(Number(e.target.value))}
+              />
+              <button onClick={handleImport} disabled={importing} className="btn-gold whitespace-nowrap">
+                {importing ? "Import…" : "Importer l'année"}
+              </button>
+            </div>
+          </div>
+          {importMessage && <p className="text-sm text-gray-600">{importMessage}</p>}
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleCreate} className="card p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
