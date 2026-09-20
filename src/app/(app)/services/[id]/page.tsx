@@ -34,7 +34,7 @@ export default function ServiceDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-serif font-bold text-ink">{service.label}</h1>
           <p className="text-sm text-gray-500">{formatDate(service.date)}</p>
@@ -54,12 +54,12 @@ export default function ServiceDetailPage() {
       <div className="card divide-y">
         {pledges.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune promesse saisie pour cet office.</p>}
         {pledges.map((p) => (
-          <div key={p.id} className="p-4 flex items-center justify-between text-sm">
-            <div>
+          <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+            <div className="min-w-0">
               <p className="font-medium text-ink">{p.donorName}</p>
               <p className="text-gray-500">{p.catalogItemName}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <span className="font-semibold">{formatEUR(p.amount)}</span>
               <StatusBadge status={p.status} />
             </div>

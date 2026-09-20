@@ -57,7 +57,7 @@ export default function DonorDetailPage() {
         <p className="text-sm text-gray-500">{donor.email || "Pas d'e-mail"} {donor.phone && `· ${donor.phone}`}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 max-w-md">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md">
         <div className="card p-4">
           <p className="text-xs text-gray-500 uppercase">Reste dû</p>
           <p className="text-xl font-bold text-amber-700">{formatEUR(totalDu)}</p>
@@ -77,13 +77,13 @@ export default function DonorDetailPage() {
         <div className="divide-y">
           {pledges.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune promesse pour ce fidèle.</p>}
           {pledges.map((p) => (
-            <div key={p.id} className="p-4 flex items-center justify-between text-sm">
-              <div>
+            <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+              <div className="min-w-0">
                 <p className="font-medium text-ink">{p.catalogItemName}</p>
                 <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)} · saisi par {p.createdByName}</p>
                 {p.notes && <p className="text-gray-400 italic">{p.notes}</p>}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
                 <span className="font-semibold">{formatEUR(p.amount)}</span>
                 <StatusBadge status={p.status} />
                 {can("envoyer_relances") && p.status !== "paye" && p.status !== "annule" && (

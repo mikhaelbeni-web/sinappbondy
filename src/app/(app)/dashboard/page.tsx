@@ -53,7 +53,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-serif font-bold text-ink">Tableau de bord</h1>
         {can("envoyer_relances") && data.counts.enAttente > 0 && (
           <button onClick={relancerToutes} disabled={sending} className="btn-gold">
@@ -78,7 +78,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="card">
-        <div className="p-4 border-b flex items-center justify-between">
+        <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold text-ink">Promesses récentes</h2>
           {can("saisir_promesses") && (
             <Link href="/pledges" className="text-sm text-gold hover:underline">
@@ -92,15 +92,15 @@ export default function DashboardPage() {
             <Link
               key={p.id}
               href={`/donors/${p.donorId}`}
-              className="flex items-center justify-between p-4 hover:bg-gray-50 text-sm"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 hover:bg-gray-50 text-sm"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium text-ink">{p.donorName}</p>
                 <p className="text-gray-500">
                   {p.catalogItemName} · {p.serviceLabel} · {formatDate(p.createdAt)}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 <span className="font-semibold">{formatEUR(p.amount)}</span>
                 <StatusBadge status={p.status} />
               </div>

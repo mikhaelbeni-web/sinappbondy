@@ -105,9 +105,9 @@ export default function CatalogPage() {
           <div className="divide-y">
             {catItems.length === 0 && <p className="p-4 text-sm text-gray-400">Rien dans cette catégorie.</p>}
             {catItems.map((i) => (
-              <div key={i.id} className="p-3 flex items-center justify-between text-sm">
-                <span className={i.active ? "" : "text-gray-400 line-through"}>{i.name}</span>
-                <div className="flex gap-2">
+              <div key={i.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className={`min-w-0 break-words ${i.active ? "" : "text-gray-400 line-through"}`}>{i.name}</span>
+                <div className="flex gap-2 shrink-0">
                   <button onClick={() => toggleActive(i.id, i.active)} className="btn-secondary text-xs px-2 py-1">
                     {i.active ? "Désactiver" : "Activer"}
                   </button>

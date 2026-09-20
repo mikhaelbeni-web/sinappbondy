@@ -23,12 +23,12 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-serif font-bold text-ink">Administration</h1>
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-2 border-b overflow-x-auto whitespace-nowrap -mx-4 px-4 sm:mx-0 sm:px-0">
         {tabs.filter((t) => t.show).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px shrink-0 ${
               tab === t.key ? "border-gold text-ink" : "border-transparent text-gray-500 hover:text-ink"
             }`}
           >
@@ -143,8 +143,8 @@ function RolesTab() {
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
         {roles.map((r) => (
           <div key={r.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
                 <p className="font-medium text-ink">
                   {r.name} {r.isAdmin && <span className="text-xs text-gold ml-1">(tous accès)</span>}
                 </p>
@@ -159,7 +159,7 @@ function RolesTab() {
                 )}
               </div>
               {!r.isAdmin && (
-                <button onClick={() => remove(r.id)} className="btn-danger text-xs px-2 py-1">
+                <button onClick={() => remove(r.id)} className="btn-danger text-xs px-2 py-1 shrink-0 self-start sm:self-auto">
                   Supprimer
                 </button>
               )}
@@ -274,13 +274,13 @@ function TeamTab() {
       <div className="card divide-y">
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
         {team.map((m) => (
-          <div key={m.id} className="p-4 flex items-center justify-between text-sm">
-            <div>
+          <div key={m.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+            <div className="min-w-0">
               <p className={`font-medium ${m.active ? "text-ink" : "text-gray-400 line-through"}`}>{m.name}</p>
-              <p className="text-gray-500">{m.email}</p>
+              <p className="text-gray-500 break-words">{m.email}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <select className="input w-40" value={m.roleId} onChange={(e) => changeRole(m.id, e.target.value)}>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <select className="input w-full sm:w-40" value={m.roleId} onChange={(e) => changeRole(m.id, e.target.value)}>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}

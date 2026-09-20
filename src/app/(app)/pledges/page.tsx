@@ -216,12 +216,12 @@ function PledgesPageInner() {
         </div>
 
         {showQuickDonor && (
-          <div className="bg-gray-50 rounded-md p-3 grid grid-cols-2 gap-2">
+          <div className="bg-gray-50 rounded-md p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input className="input" placeholder="Prénom" value={quickDonor.firstName} onChange={(e) => setQuickDonor({ ...quickDonor, firstName: e.target.value })} />
             <input className="input" placeholder="Nom" value={quickDonor.lastName} onChange={(e) => setQuickDonor({ ...quickDonor, lastName: e.target.value })} />
             <input className="input" placeholder="E-mail" value={quickDonor.email} onChange={(e) => setQuickDonor({ ...quickDonor, email: e.target.value })} />
             <input className="input" placeholder="Téléphone" value={quickDonor.phone} onChange={(e) => setQuickDonor({ ...quickDonor, phone: e.target.value })} />
-            <div className="col-span-2 flex gap-2">
+            <div className="col-span-1 sm:col-span-2 flex flex-wrap gap-2">
               <button type="button" onClick={createQuickDonor} className="btn-primary text-sm">Ajouter ce fidèle</button>
               <button type="button" onClick={() => setShowQuickDonor(false)} className="btn-secondary text-sm">Annuler</button>
             </div>
@@ -261,9 +261,9 @@ function PledgesPageInner() {
         </button>
       </form>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold text-ink">Toutes les promesses</h2>
-        <select className="input w-48" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="input w-full sm:w-48" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">Tous les statuts</option>
           <option value="en_attente">En attente</option>
           <option value="relance_envoyee">Relance envoyée</option>
@@ -276,12 +276,12 @@ function PledgesPageInner() {
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
         {!loading && visiblePledges.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune promesse.</p>}
         {visiblePledges.map((p) => (
-          <div key={p.id} className="p-4 flex items-center justify-between text-sm">
-            <div>
+          <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+            <div className="min-w-0">
               <p className="font-medium text-ink">{p.donorName} — {p.catalogItemName}</p>
               <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
               <span className="font-semibold">{formatEUR(p.amount)}</span>
               <StatusBadge status={p.status} />
               {can("envoyer_relances") && p.status !== "paye" && p.status !== "annule" && (

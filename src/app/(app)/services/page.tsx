@@ -179,19 +179,21 @@ export default function ServicesPage() {
 
       {/* Calendrier */}
       <div className="card p-4">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => setMonth((m) => subMonths(m, 1))} className="btn-secondary px-3 py-1.5">
-            ← Précédent
-          </button>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="order-2 sm:order-1 flex items-center gap-2">
             <h2 className="font-semibold text-ink capitalize">{format(month, "MMMM yyyy", { locale: fr })}</h2>
-            <button onClick={() => setMonth(startOfMonth(new Date()))} className="text-xs text-gold hover:underline">
+            <button onClick={() => setMonth(startOfMonth(new Date()))} className="text-xs text-gold hover:underline whitespace-nowrap">
               Aujourd'hui
             </button>
           </div>
-          <button onClick={() => setMonth((m) => addMonths(m, 1))} className="btn-secondary px-3 py-1.5">
-            Suivant →
-          </button>
+          <div className="order-1 sm:order-2 flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <button onClick={() => setMonth((m) => subMonths(m, 1))} className="btn-secondary px-3 py-1.5 text-sm">
+              ← Précédent
+            </button>
+            <button onClick={() => setMonth((m) => addMonths(m, 1))} className="btn-secondary px-3 py-1.5 text-sm">
+              Suivant →
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
@@ -200,7 +202,7 @@ export default function ServicesPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
           {calendarDays.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd");
             const dayServices = byDate.get(dateStr) || [];
@@ -211,7 +213,7 @@ export default function ServicesPage() {
               <button
                 key={dateStr}
                 onClick={() => setSelectedDay(selected ? null : dateStr)}
-                className={`min-h-[76px] rounded-md border p-1.5 text-left align-top transition-colors ${
+                className={`min-h-[56px] sm:min-h-[76px] rounded-md border p-1 sm:p-1.5 text-left align-top transition-colors ${
                   inMonth ? "bg-white" : "bg-gray-50 text-gray-300"
                 } ${today ? "border-gold" : "border-gray-100"} ${selected ? "ring-2 ring-gold" : ""} hover:bg-cream`}
               >
@@ -251,9 +253,9 @@ export default function ServicesPage() {
           {selectedServices.length === 0 && <p className="text-sm text-gray-500">Aucun office ce jour-là.</p>}
           <div className="divide-y">
             {selectedServices.map((s) => (
-              <Link key={s.id} href={`/services/${s.id}`} className="flex items-center justify-between py-2 hover:bg-gray-50 text-sm">
-                <span className="text-ink">{s.label}</span>
-                <span className="text-gray-500">{TYPE_LABELS[s.type] || s.type} · <span className="text-gold">Voir →</span></span>
+              <Link key={s.id} href={`/services/${s.id}`} className="flex flex-wrap items-center justify-between gap-1 py-2 hover:bg-gray-50 text-sm">
+                <span className="text-ink min-w-0 break-words">{s.label}</span>
+                <span className="text-gray-500 shrink-0">{TYPE_LABELS[s.type] || s.type} · <span className="text-gold">Voir →</span></span>
               </Link>
             ))}
           </div>
