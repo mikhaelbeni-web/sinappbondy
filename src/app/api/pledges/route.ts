@@ -21,8 +21,12 @@ export async function GET(req: NextRequest) {
       query = query.where("createdBy", "==", user.uid);
     }
 
-    const snap = await query.orderBy("createdAt", "desc").get();
-    const pledges = snap.docs.map((d) => d.data());
+    // Pas de orderBy() Firestore ici : combiné aux where() ci-dessus sur
+    // d'autres champs, ça exigerait un index composite. Tri en mémoire.
+    const snap = await query.get();
+    const pledges = snap.docs
+      .map((d) => d.data() as any)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     return NextResponse.json({ pledges });
   } catch (err) {
     return handleApiError(err);

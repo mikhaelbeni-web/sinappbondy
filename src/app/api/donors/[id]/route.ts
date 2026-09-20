@@ -8,12 +8,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const snap = await adminDb().collection("donors").doc(params.id).get();
     if (!snap.exists) return jsonError("Fidèle introuvable.", 404);
 
-    const pledgesSnap = await adminDb()
-      .collection("pledges")
-      .where("donorId", "==", params.id)
-      .orderBy("createdAt", "desc")
-      .get();
-    const pledges = pledgesSnap.docs.map((d) => d.data());
+    // Pas de orderBy() ici : combiné à un where() sur un autre champ, ça
+    // exigerait un index composite Firestore. On trie en mémoire à la place
+    // (volumes faibles, sans conséquence).
+    const pledgesSnap = await adminDb().collection("pledges").where("donorId", "==", params.id).get();
+    const pledges = pledgesSnap.docs
+      .map((d) => d.data() as any)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
     return NextResponse.json({ donor: snap.data(), pledges });
   } catch (err) {

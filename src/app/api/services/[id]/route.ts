@@ -8,12 +8,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const snap = await adminDb().collection("services").doc(params.id).get();
     if (!snap.exists) return jsonError("Office introuvable.", 404);
 
-    const pledgesSnap = await adminDb()
-      .collection("pledges")
-      .where("serviceId", "==", params.id)
-      .orderBy("createdAt", "desc")
-      .get();
-    const pledges = pledgesSnap.docs.map((d) => d.data());
+    const pledgesSnap = await adminDb().collection("pledges").where("serviceId", "==", params.id).get();
+    const pledges = pledgesSnap.docs
+      .map((d) => d.data() as any)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
     return NextResponse.json({ service: snap.data(), pledges });
   } catch (err) {
