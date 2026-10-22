@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { hasPermission } from "@/lib/permissions";
-import { createPledgePaymentLink } from "@/lib/stripeHelpers";
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,6 +70,7 @@ export async function POST(req: NextRequest) {
       catalogItemId: catalogItemId || null,
       catalogItemName: resolvedCatalogItemName,
       amount: Number(amount),
+      amountPaid: 0,
       currency: "eur",
       status: "en_attente",
       notes: notes || "",
@@ -86,23 +86,8 @@ export async function POST(req: NextRequest) {
       paidAt: null,
     };
 
-    // Le lien de paiement Stripe est créé tout de suite pour être prêt
-    // dès la première relance. Si Stripe n'est pas configuré, la
-    // promesse est quand même enregistrée (le lien pourra être généré
-    // plus tard, lors de la relance).
-    try {
-      const link = await createPledgePaymentLink({
-        pledgeId: ref.id,
-        amount: Number(amount),
-        donorName: doc.donorName,
-        catalogItemName: resolvedCatalogItemName,
-      });
-      doc.stripePaymentLinkUrl = link.url;
-      doc.stripePaymentLinkId = link.id;
-    } catch (stripeErr) {
-      console.warn("[pledges] création du lien Stripe impossible:", stripeErr);
-    }
-
+    // Plus de Payment Link Stripe à montant fixe : les relances envoient un
+    // lien signé (/api/pay) qui calcule le reste dû au moment du clic.
     await ref.set(doc);
     return NextResponse.json({ pledge: doc });
   } catch (err) {

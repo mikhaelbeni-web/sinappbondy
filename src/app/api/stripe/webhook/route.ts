@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { getStripe } from "@/lib/stripe";
+import { recordPayment } from "@/lib/payments";
 
 // Stripe a besoin du corps brut de la requête pour vérifier la signature.
 export const runtime = "nodejs";
@@ -26,19 +27,33 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as any;
-    const pledgeId = session.metadata?.pledgeId;
+    if (session.payment_status && session.payment_status !== "paid") {
+      return NextResponse.json({ received: true });
+    }
+    const pledgeId: string | undefined = session.metadata?.pledgeId;
+    let donorId: string | undefined = session.metadata?.donorId;
+    const amount = (session.amount_total || 0) / 100;
 
-    if (pledgeId) {
-      const ref = adminDb().collection("pledges").doc(pledgeId);
-      const snap = await ref.get();
-      if (snap.exists) {
-        await ref.update({
-          status: "paye",
-          paidAt: new Date().toISOString(),
-          stripeCheckoutSessionId: session.id,
-          updatedAt: new Date().toISOString(),
-        });
-      }
+    // Les anciens Payment Links ne portent que pledgeId : on retrouve le fidèle.
+    if (pledgeId && !donorId) {
+      const snap = await adminDb().collection("pledges").doc(pledgeId).get();
+      if (snap.exists) donorId = (snap.data() as any).donorId;
+    }
+
+    if (donorId && amount > 0) {
+      // L'id du paiement = id de la session : un webhook rejoué ne compte pas deux fois.
+      await recordPayment({
+        id: session.id,
+        donorId,
+        pledgeId: pledgeId || null,
+        amount,
+        method: "cb_en_ligne",
+        reference: session.payment_intent || session.id,
+        date: new Date().toISOString().slice(0, 10),
+        stripeCheckoutSessionId: session.id,
+        createdBy: "stripe",
+        createdByName: "Paiement en ligne",
+      });
     }
   }
 

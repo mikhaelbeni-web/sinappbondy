@@ -23,6 +23,9 @@ export interface DonorDoc {
   lastName: string;
   email: string;
   phone: string;
+  address?: string;
+  postalCode?: string;
+  city?: string;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -52,7 +55,7 @@ export interface ServiceDoc {
   createdAt: string;
 }
 
-export type PledgeStatus = "en_attente" | "relance_envoyee" | "paye" | "annule";
+export type PledgeStatus = "en_attente" | "relance_envoyee" | "partiel" | "paye" | "annule";
 
 export interface PledgeDoc {
   id: string;
@@ -64,6 +67,7 @@ export interface PledgeDoc {
   catalogItemId: string | null;
   catalogItemName: string; // texte libre possible si pas dans le catalogue
   amount: number; // en euros
+  amountPaid?: number; // cumul des paiements affectés (absent sur les anciennes promesses)
   currency: "eur";
   status: PledgeStatus;
   notes: string;
@@ -77,6 +81,30 @@ export interface PledgeDoc {
   remindersSentCount: number;
   lastReminderAt: string | null;
   paidAt: string | null;
+}
+
+export type PaymentMethod = "cb_en_ligne" | "cb_terminal" | "cheque" | "especes" | "virement";
+
+export interface PaymentAllocation {
+  pledgeId: string;
+  amount: number;
+}
+
+export interface PaymentDoc {
+  id: string;
+  donorId: string;
+  donorName: string;
+  amount: number; // en euros
+  method: PaymentMethod;
+  reference: string; // n° de chèque, référence de virement…
+  date: string; // yyyy-mm-dd, date d'encaissement
+  notes: string;
+  allocations: PaymentAllocation[]; // promesses soldées par ce paiement
+  unallocated: number; // reliquat non affecté (avoir)
+  stripeCheckoutSessionId: string | null;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
 }
 
 export interface SessionUser {

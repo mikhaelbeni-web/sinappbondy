@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { sendReminderEmail } from "@/lib/email";
-import { createPledgePaymentLink } from "@/lib/stripeHelpers";
+import { payUrl } from "@/lib/payments";
+import { remainingOf } from "@/lib/format";
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -18,33 +19,22 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return jsonError("Ce fidèle n'a pas d'adresse e-mail enregistrée.", 400);
     }
 
-    let paymentLinkUrl = pledge.stripePaymentLinkUrl;
-    let paymentLinkId = pledge.stripePaymentLinkId;
-    if (!paymentLinkUrl) {
-      const link = await createPledgePaymentLink({
-        pledgeId: pledge.id,
-        amount: pledge.amount,
-        donorName: pledge.donorName,
-        catalogItemName: pledge.catalogItemName,
-      });
-      paymentLinkUrl = link.url;
-      paymentLinkId = link.id;
-    }
+    // Lien signé : le montant (reste dû) est recalculé au moment du clic.
+    const link = payUrl({ kind: "pledge", id: pledge.id });
 
     await sendReminderEmail({
       to: pledge.donorEmail,
       donorName: pledge.donorName,
-      amount: pledge.amount,
+      amount: remainingOf(pledge),
       catalogItemName: pledge.catalogItemName,
       serviceLabel: pledge.serviceLabel,
-      payUrl: paymentLinkUrl,
+      payUrl: link,
     });
 
     const now = new Date().toISOString();
     await ref.update({
-      status: "relance_envoyee",
-      stripePaymentLinkUrl: paymentLinkUrl,
-      stripePaymentLinkId: paymentLinkId,
+      // Un paiement partiel reste visible comme tel après relance.
+      status: pledge.status === "partiel" ? "partiel" : "relance_envoyee",
       remindersSentCount: (pledge.remindersSentCount || 0) + 1,
       lastReminderAt: now,
       updatedAt: now,

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { formatEUR, formatDate } from "@/lib/format";
+import { formatEUR, formatDate, paidOf, remainingOf } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 
@@ -153,7 +153,14 @@ function PledgesPageInner() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-serif font-bold text-ink">Promesses de dons</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-serif font-bold text-ink">Promesses de dons</h1>
+        {can("voir_tout") && (
+          <a href="/api/export/promesses" className="btn-secondary">
+            Exporter (CSV)
+          </a>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="card p-4 space-y-4">
         <p className="text-sm text-gray-500">
@@ -267,6 +274,7 @@ function PledgesPageInner() {
           <option value="">Tous les statuts</option>
           <option value="en_attente">En attente</option>
           <option value="relance_envoyee">Relance envoyée</option>
+          <option value="partiel">Partiel</option>
           <option value="paye">Payé</option>
           <option value="annule">Annulé</option>
         </select>
@@ -280,11 +288,14 @@ function PledgesPageInner() {
             <div className="min-w-0">
               <p className="font-medium text-ink">{p.donorName} — {p.catalogItemName}</p>
               <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)}</p>
+              {p.status === "partiel" && (
+                <p className="text-purple-700 text-xs">Réglé {formatEUR(paidOf(p))} · reste {formatEUR(remainingOf(p))}</p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
               <span className="font-semibold">{formatEUR(p.amount)}</span>
               <StatusBadge status={p.status} />
-              {can("envoyer_relances") && p.status !== "paye" && p.status !== "annule" && (
+              {can("envoyer_relances") && remainingOf(p) > 0 && (
                 <button onClick={() => relancer(p.id)} disabled={remindingId === p.id} className="btn-secondary text-xs px-2 py-1">
                   {remindingId === p.id ? "Envoi…" : "Relancer"}
                 </button>

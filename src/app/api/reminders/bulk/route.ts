@@ -3,9 +3,10 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { hasPermission } from "@/lib/permissions";
 import { sendReminderEmail } from "@/lib/email";
-import { createPledgePaymentLink } from "@/lib/stripeHelpers";
+import { payUrl } from "@/lib/payments";
+import { remainingOf } from "@/lib/format";
 
-// Relance en une fois toutes les promesses "en attente" (visibles par
+// Relance en une fois toutes les promesses "en attente" ou "partiel" (visibles par
 // l'utilisateur) qui ont un e-mail de fidèle renseigné.
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const pledgeIds: string[] | undefined = body?.pledgeIds;
 
-    let query: FirebaseFirestore.Query = adminDb().collection("pledges").where("status", "==", "en_attente");
+    let query: FirebaseFirestore.Query = adminDb().collection("pledges").where("status", "in", ["en_attente", "partiel"]);
     if (!hasPermission(user.role, "voir_tout")) {
       query = query.where("createdBy", "==", user.uid);
     }
@@ -33,33 +34,21 @@ export async function POST(req: NextRequest) {
           results.push({ id: d.id, ok: false, error: "Pas d'e-mail" });
           continue;
         }
-        let paymentLinkUrl = pledge.stripePaymentLinkUrl;
-        let paymentLinkId = pledge.stripePaymentLinkId;
-        if (!paymentLinkUrl) {
-          const link = await createPledgePaymentLink({
-            pledgeId: pledge.id,
-            amount: pledge.amount,
-            donorName: pledge.donorName,
-            catalogItemName: pledge.catalogItemName,
-          });
-          paymentLinkUrl = link.url;
-          paymentLinkId = link.id;
-        }
+        // Lien signé : le montant (reste dû) est recalculé au moment du clic.
+        const link = payUrl({ kind: "pledge", id: pledge.id });
 
         await sendReminderEmail({
           to: pledge.donorEmail,
           donorName: pledge.donorName,
-          amount: pledge.amount,
+          amount: remainingOf(pledge),
           catalogItemName: pledge.catalogItemName,
           serviceLabel: pledge.serviceLabel,
-          payUrl: paymentLinkUrl,
+          payUrl: link,
         });
 
         const now = new Date().toISOString();
         await d.ref.update({
-          status: "relance_envoyee",
-          stripePaymentLinkUrl: paymentLinkUrl,
-          stripePaymentLinkId: paymentLinkId,
+          status: pledge.status === "partiel" ? "partiel" : "relance_envoyee",
           remindersSentCount: (pledge.remindersSentCount || 0) + 1,
           lastReminderAt: now,
           updatedAt: now,

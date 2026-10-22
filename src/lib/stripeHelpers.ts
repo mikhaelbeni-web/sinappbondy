@@ -50,3 +50,35 @@ export async function createPledgePaymentLink(params: {
 
   return { url: paymentLink.url, id: paymentLink.id };
 }
+
+// Session Checkout à montant calculé au moment du clic (solde d'un fidèle
+// ou reste dû d'une promesse partiellement réglée). Les métadonnées sont
+// lues par le webhook pour affecter le paiement.
+export async function createCheckoutSession(params: {
+  amount: number; // en euros
+  label: string;
+  email?: string;
+  metadata: Record<string, string>;
+}): Promise<string> {
+  const stripe = getStripe();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: params.email || undefined,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "eur",
+          unit_amount: Math.round(params.amount * 100),
+          product_data: { name: params.label.slice(0, 250) },
+        },
+      },
+    ],
+    metadata: params.metadata,
+    success_url: `${appUrl}/merci`,
+    cancel_url: `${appUrl}/merci?annule=1`,
+  });
+  if (!session.url) throw new Error("Stripe n'a pas renvoyé d'URL de paiement.");
+  return session.url;
+}
