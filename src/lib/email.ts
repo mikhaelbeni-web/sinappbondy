@@ -220,3 +220,45 @@ export function messageHtml(params: { synagogueName: string; body: string; unsub
     </div>
   `;
 }
+
+// Rappel de hazkara à la famille.
+export async function sendHazkaraEmail(params: {
+  to: string;
+  donorName: string;
+  deceasedName: string;
+  relation: string;
+  date: string; // yyyy-mm-dd
+  hebrew: string;
+}) {
+  const resend = getResend();
+  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const d = new Date(`${params.date}T12:00:00`);
+  const dateFr = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const veille = new Date(d.getTime() - 86400_000).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const subject = `Hazkara de ${params.deceasedName} le ${dateFr}`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(synagogueName)}</h2>
+      <p>Chalom ${escapeHtml(params.donorName)},</p>
+      <p>
+        La hazkara de <strong>${escapeHtml(params.deceasedName)}</strong>${params.relation ? ` (${escapeHtml(params.relation)})` : ""}
+        tombe le <strong>${dateFr}</strong> (${escapeHtml(params.hebrew)}). Elle commence la veille au soir, ${veille}.
+      </p>
+      <p>N'hésitez pas à contacter la synagogue pour organiser le Kaddich, une montée à la Torah ou un limoud.</p>
+      <p style="text-align:center;margin:28px 0;">
+        <a href="${appUrl}/don" style="background:#b8860b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;">
+          Faire un don à sa mémoire
+        </a>
+      </p>
+      <p>Que son âme repose en paix.</p>
+    </div>
+  `;
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY absent — rappel de hazkara non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  }
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  await resend.emails.send({ from, to: params.to, subject, html });
+  return { sent: true };
+}

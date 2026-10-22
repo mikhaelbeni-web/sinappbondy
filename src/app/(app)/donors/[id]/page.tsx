@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { formatEUR, formatDate, METHOD_LABELS, paidOf, remainingOf } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import PaymentForm from "@/components/PaymentForm";
+import HazkarotSection from "@/components/HazkarotSection";
 import { useAuth } from "@/context/AuthContext";
 
 export default function DonorDetailPage() {
@@ -136,6 +137,7 @@ export default function DonorDetailPage() {
                   city: donor.city || "",
                   groups: (donor.groups || []).join(", "),
                   emailOptOut: !!donor.emailOptOut,
+                  membershipTier: donor.membershipTier || "",
                 });
                 setEditing((v) => !v);
               }}
@@ -169,6 +171,10 @@ export default function DonorDetailPage() {
           <div className="sm:col-span-2">
             <label className="label">Groupes (séparés par des virgules)</label>
             <input className="input" placeholder="ex : Conseil, Jeunes, Cours du mardi" value={form.groups || ""} onChange={(e) => setForm({ ...form, groups: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Formule de cotisation</label>
+            <input className="input" placeholder="ex : Famille" value={form.membershipTier || ""} onChange={(e) => setForm({ ...form, membershipTier: e.target.value })} />
           </div>
           <label className="sm:col-span-2 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!form.emailOptOut} onChange={(e) => setForm({ ...form, emailOptOut: e.target.checked })} />
@@ -323,6 +329,8 @@ export default function DonorDetailPage() {
           </div>
         </div>
       )}
+
+      <HazkarotSection donorId={id} canEdit={can("gerer_fideles")} />
     </div>
   );
 }

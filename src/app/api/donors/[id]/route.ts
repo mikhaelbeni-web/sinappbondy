@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const snap = await ref.get();
     if (!snap.exists) return jsonError("Fidèle introuvable.", 404);
 
-    const { firstName, lastName, email, phone, notes, address, postalCode, city, groups, emailOptOut } = await req.json();
+    const { firstName, lastName, email, phone, notes, address, postalCode, city, groups, emailOptOut, membershipTier } = await req.json();
     const update: any = { updatedAt: new Date().toISOString() };
     if (typeof firstName === "string" && firstName.trim()) update.firstName = firstName.trim();
     if (typeof lastName === "string" && lastName.trim()) update.lastName = lastName.trim();
@@ -64,6 +64,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       update.groups = Array.from(new Set(groups.map((g: unknown) => String(g).trim()).filter(Boolean))).slice(0, 20);
     }
     if (typeof emailOptOut === "boolean") update.emailOptOut = emailOptOut;
+    if (typeof membershipTier === "string") update.membershipTier = membershipTier.trim();
 
     await ref.update(update);
     return NextResponse.json({ ok: true });

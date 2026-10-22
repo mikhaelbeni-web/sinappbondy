@@ -26,6 +26,7 @@ export interface DonorDoc {
   address?: string;
   postalCode?: string;
   city?: string;
+  membershipTier?: string; // formule de cotisation habituelle (ex. « Famille »)
   groups?: string[]; // ex. « Conseil », « Jeunes » : ciblage des messages
   emailOptOut?: boolean; // désinscrit des messages groupés (pas des relances ni reçus)
   notes: string;
@@ -61,6 +62,8 @@ export type PledgeStatus = "en_attente" | "relance_envoyee" | "partiel" | "paye"
 
 export interface PledgeDoc {
   id: string;
+  kind?: "office" | "cotisation"; // absent = promesse d'office
+  membershipYear?: number; // cotisation : année couverte
   donorId: string;
   donorName: string;
   donorEmail: string;

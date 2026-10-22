@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hebcal/core": "^5.8.0",
     "@types/qrcode": "^1.5.5",
     "date-fns": "^3.6.0",
     "firebase": "^10.14.1",

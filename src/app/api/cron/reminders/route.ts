@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runReminders } from "@/lib/autoReminders";
+import { isRestDay, runReminders } from "@/lib/autoReminders";
+import { runHazkaraReminders } from "@/lib/hazkarot";
 
-// Appelé chaque jour par Vercel Cron (voir vercel.json). Vercel envoie
+// Relances de dons et rappels de hazkara, appelé chaque jour par Vercel Cron (voir vercel.json). Vercel envoie
 // « Authorization: Bearer $CRON_SECRET » quand la variable est définie.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -10,7 +11,10 @@ export async function GET(req: NextRequest) {
   }
   try {
     const result = await runReminders("cron", "Relance automatique");
-    return NextResponse.json(result);
+    // Rappels de hazkara : même règle, rien le Chabbat ni les jours de fête.
+    const rest = await isRestDay();
+    const hazkarot = rest ? { sent: 0, skipped: `pas d'envoi : ${rest}` } : await runHazkaraReminders();
+    return NextResponse.json({ ...result, hazkarot });
   } catch (err) {
     console.error("[cron/reminders]", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
