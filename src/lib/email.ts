@@ -262,3 +262,41 @@ export async function sendHazkaraEmail(params: {
   await resend.emails.send({ from, to: params.to, subject, html });
   return { sent: true };
 }
+
+// Confirmation des places attribuées pour les fêtes.
+export async function sendSeatConfirmationEmail(params: {
+  to: string;
+  donorName: string;
+  planName: string;
+  seats: string[];
+  due: number;
+  payUrl: string | null;
+}) {
+  const resend = getResend();
+  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+  const subject = `Vos places - ${params.planName}`;
+  const list = params.seats.map((s) => `<li>${escapeHtml(s)}</li>`).join("");
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(synagogueName)}</h2>
+      <p>Chalom ${escapeHtml(params.donorName)},</p>
+      <p>Voici vos places pour <strong>${escapeHtml(params.planName)}</strong> :</p>
+      <ul>${list}</ul>
+      ${
+        params.due > 0 && params.payUrl
+          ? `<p>Reste à régler : <strong>${eur(params.due)}</strong>.</p>
+             <p style="text-align:center;margin:28px 0;"><a href="${params.payUrl}" style="background:#b8860b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;">Régler en ligne</a></p>`
+          : ""
+      }
+      <p>Chana tova !</p>
+    </div>
+  `;
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY absent — confirmation de places non envoyée:", { to: params.to });
+    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  }
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  await resend.emails.send({ from, to: params.to, subject, html });
+  return { sent: true };
+}

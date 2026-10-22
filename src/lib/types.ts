@@ -62,7 +62,7 @@ export type PledgeStatus = "en_attente" | "relance_envoyee" | "partiel" | "paye"
 
 export interface PledgeDoc {
   id: string;
-  kind?: "office" | "cotisation"; // absent = promesse d'office
+  kind?: "office" | "cotisation" | "place"; // absent = promesse d'office
   membershipYear?: number; // cotisation : année couverte
   donorId: string;
   donorName: string;
