@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { hasPermission } from "@/lib/permissions";
 import { METHOD_LABELS, STATUS_LABELS, paidOf, remainingOf } from "@/lib/format";
+import { EXPENSE_CATEGORIES, EXPENSE_METHODS } from "@/lib/treasury";
 
 // Exports CSV pour le comptable : séparateur « ; » et BOM UTF-8 pour
 // qu'Excel (version française) ouvre le fichier correctement.
@@ -65,6 +66,24 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
           p.notes || "",
         ]);
       csv = toCsv(["Date", "Fidèle", "Montant", "Mode", "Référence", "Non affecté", "Saisi par", "Notes"], rows);
+    } else if (params.type === "depenses") {
+      if (!hasPermission(user.role, "gerer_paiements")) return jsonError("Permission manquante : gerer_paiements", 403);
+      const snap = await db.collection("expenses").get();
+      const rows = snap.docs
+        .map((d) => d.data() as any)
+        .filter((e) => inRange(e.date))
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
+        .map((e) => [
+          e.date,
+          EXPENSE_CATEGORIES[e.category] || e.category,
+          e.label,
+          e.supplier || "",
+          e.amount,
+          EXPENSE_METHODS[e.method] || e.method || "",
+          e.reference || "",
+          e.createdByName || "",
+        ]);
+      csv = toCsv(["Date", "Catégorie", "Libellé", "Fournisseur", "Montant", "Mode", "Référence", "Saisi par"], rows);
     } else if (params.type === "fideles") {
       const [donorsSnap, pledgesSnap] = await Promise.all([db.collection("donors").get(), db.collection("pledges").get()]);
       const due: Record<string, number> = {};

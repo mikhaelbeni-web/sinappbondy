@@ -135,6 +135,11 @@ export async function deletePayment(paymentId: string): Promise<void> {
       err.status = 409;
       throw err;
     }
+    if (payment.depositId) {
+      const err: any = new Error("Ce paiement fait partie d'une remise en banque : supprimez d'abord la remise.");
+      err.status = 409;
+      throw err;
+    }
     const refs = payment.allocations.map((a) => db.collection("pledges").doc(a.pledgeId));
     const pledgeSnaps = refs.length ? await tx.getAll(...refs) : [];
     const now = new Date().toISOString();

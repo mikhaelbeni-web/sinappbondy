@@ -9,6 +9,7 @@ const NAV = [
   { href: "/dashboard", label: "Tableau de bord", perm: null },
   { href: "/pledges", label: "Promesses de dons", perm: "saisir_promesses" as const },
   { href: "/payments", label: "Encaissements", perm: "gerer_paiements" as const },
+  { href: "/treasury", label: "Trésorerie", perm: "gerer_paiements" as const },
   { href: "/memberships", label: "Cotisations", perm: "gerer_paiements" as const },
   { href: "/seating", label: "Places des fêtes", perm: "gerer_paiements" as const },
   { href: "/receipts", label: "Reçus fiscaux", perm: "gerer_paiements" as const },
