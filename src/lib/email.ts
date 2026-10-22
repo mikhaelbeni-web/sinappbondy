@@ -300,3 +300,45 @@ export async function sendSeatConfirmationEmail(params: {
   await resend.emails.send({ from, to: params.to, subject, html });
   return { sent: true };
 }
+
+// Billet d'événement : QR code en pièce jointe et lien vers le billet.
+export async function sendTicketEmail(params: {
+  to: string;
+  name: string;
+  event: { title: string; date: string; location: string };
+  qty: number;
+  code: string;
+  url: string;
+  qrPng: Buffer;
+}) {
+  const resend = getResend();
+  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const when = new Date(`${params.event.date}:00`).toLocaleString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const subject = `Votre billet - ${params.event.title}`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(synagogueName)}</h2>
+      <p>Chalom ${escapeHtml(params.name)},</p>
+      <p>Votre inscription à <strong>${escapeHtml(params.event.title)}</strong> est confirmée
+        (${params.qty} place${params.qty > 1 ? "s" : ""}).</p>
+      <p>${escapeHtml(when)}${params.event.location ? `<br/>${escapeHtml(params.event.location)}` : ""}</p>
+      <p>Présentez le QR code joint (ou ce lien) à l'entrée : <a href="${params.url}">${params.url}</a></p>
+      <p style="font-size:20px;letter-spacing:3px;font-weight:bold;text-align:center;">${escapeHtml(params.code)}</p>
+    </div>
+  `;
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY absent — billet non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  }
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  await resend.emails.send({
+    from,
+    to: params.to,
+    subject,
+    html,
+    attachments: [{ filename: `billet-${params.code}.png`, content: params.qrPng }],
+  });
+  return { sent: true };
+}

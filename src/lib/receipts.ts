@@ -55,9 +55,14 @@ export async function issueReceipt(params: {
       return p;
     });
     payments.sort((a, b) => (a.date < b.date ? -1 : 1));
+    // Seule la part sans contrepartie figure sur le reçu.
+    const deductible = payments
+      .map((p) => ({ p, amount: round2(p.amount - (p.nonDeductible || 0)) }))
+      .filter((x) => x.amount > 0);
+    if (!deductible.length) throw httpError("Ces paiements ne donnent pas droit à un reçu fiscal (contrepartie).");
 
     // L'année fiscale du reçu est celle du dernier versement couvert.
-    const year = Number(payments[payments.length - 1].date.slice(0, 4));
+    const year = Number(deductible[deductible.length - 1].p.date.slice(0, 4));
     const counterRef = db.collection("settings").doc(`receiptCounter_${year}`);
     const counterSnap = await tx.get(counterRef);
     const next = ((counterSnap.exists ? (counterSnap.data() as any).last : 0) || 0) + 1;
@@ -76,10 +81,10 @@ export async function issueReceipt(params: {
         city: donor.city,
         email: donor.email || "",
       },
-      amount: round2(payments.reduce((s, p) => s + p.amount, 0)),
-      payments: payments.map((p) => ({ id: p.id, date: p.date, amount: p.amount, method: p.method })),
-      periodStart: params.kind === "annuel" ? `${year}-01-01` : payments[0].date,
-      periodEnd: params.kind === "annuel" ? `${year}-12-31` : payments[payments.length - 1].date,
+      amount: round2(deductible.reduce((s, x) => s + x.amount, 0)),
+      payments: deductible.map(({ p, amount }) => ({ id: p.id, date: p.date, amount, method: p.method })),
+      periodStart: params.kind === "annuel" ? `${year}-01-01` : deductible[0].p.date,
+      periodEnd: params.kind === "annuel" ? `${year}-12-31` : deductible[deductible.length - 1].p.date,
       association: {
         legalName: association.legalName,
         address: association.address,
@@ -152,6 +157,7 @@ export async function autoReceiptForPayment(payment: PaymentDoc, issuedBy: strin
   try {
     const association = await getAssociation();
     if (!association.autoReceipt || missingAssociationFields(association).length) return null;
+    if (payment.amount - (payment.nonDeductible || 0) <= 0) return null;
     const donorSnap = await adminDb().collection("donors").doc(payment.donorId).get();
     if (!donorAddressComplete(donorSnap.data())) return null;
 
@@ -180,6 +186,8 @@ export async function pendingByDonor(year: number) {
   for (const d of paySnap.docs) {
     const p = d.data() as PaymentDoc;
     if (p.receiptId || !p.date.startsWith(String(year))) continue;
+    const deductible = round2(p.amount - (p.nonDeductible || 0));
+    if (deductible <= 0) continue;
     const donor = donors.get(p.donorId);
     const g = groups.get(p.donorId) || {
       donorId: p.donorId,
@@ -189,7 +197,7 @@ export async function pendingByDonor(year: number) {
       hasAddress: donorAddressComplete(donor),
       hasEmail: !!donor?.email,
     };
-    g.amount = round2(g.amount + p.amount);
+    g.amount = round2(g.amount + deductible);
     g.paymentIds.push(p.id);
     groups.set(p.donorId, g);
   }

@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { recordPayment } from "@/lib/payments";
 import { autoReceiptForPayment } from "@/lib/receipts";
 import { findOrCreateDonor } from "@/lib/donors";
+import { createRegistration } from "@/lib/events";
 
 // Stripe a besoin du corps brut de la requête pour vérifier la signature.
 export const runtime = "nodejs";
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
     }
 
     const isDonation = session.metadata?.kind === "don";
-    if (isDonation && amount > 0) {
+    const isTicket = session.metadata?.kind === "billet";
+    if ((isDonation || isTicket) && amount > 0) {
       const m = session.metadata;
       donorId = await findOrCreateDonor({
         firstName: m.firstName,
@@ -61,9 +63,10 @@ export async function POST(req: NextRequest) {
         id: session.id,
         donorId,
         pledgeId: pledgeId || null,
-        // Un don libre ne vient pas solder les promesses du fidèle.
-        allocate: !isDonation,
+        // Un don libre ou un billet ne vient pas solder les promesses du fidèle.
+        allocate: !isDonation && !isTicket,
         campaignId: session.metadata?.campaignId || null,
+        eventId: isTicket ? session.metadata.eventId : null,
         amount,
         method: "cb_en_ligne",
         reference: session.payment_intent || session.id,
@@ -73,6 +76,22 @@ export async function POST(req: NextRequest) {
         createdByName: "Paiement en ligne",
       });
       if (payment) await autoReceiptForPayment(payment, "Paiement en ligne");
+      if (isTicket) {
+        const m = session.metadata;
+        const evSnap = await adminDb().collection("events").doc(m.eventId).get();
+        if (evSnap.exists) {
+          await createRegistration({
+            id: session.id,
+            event: evSnap.data() as any,
+            donorId,
+            name: `${m.firstName} ${m.lastName}`,
+            email: m.email,
+            qty: Number(m.qty) || 1,
+            amount,
+            paymentId: session.id,
+          });
+        }
+      }
     }
   }
 

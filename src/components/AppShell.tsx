@@ -13,6 +13,7 @@ const NAV = [
   { href: "/seating", label: "Places des fêtes", perm: "gerer_paiements" as const },
   { href: "/receipts", label: "Reçus fiscaux", perm: "gerer_paiements" as const },
   { href: "/campaigns", label: "Campagnes de dons", perm: "gerer_paiements" as const },
+  { href: "/events", label: "Événements", perm: "gerer_paiements" as const },
   { href: "/donors", label: "Fidèles", perm: null },
   { href: "/messages", label: "Messages", perm: "envoyer_messages" as const },
   { href: "/services", label: "Offices", perm: null },

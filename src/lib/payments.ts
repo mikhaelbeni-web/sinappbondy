@@ -21,6 +21,7 @@ export async function recordPayment(params: {
   pledgeId?: string | null;
   allocate?: boolean; // false : don libre, non affecté aux promesses
   campaignId?: string | null;
+  eventId?: string | null;
   stripeCheckoutSessionId?: string | null;
   createdBy: string;
   createdByName: string;
@@ -64,6 +65,8 @@ export async function recordPayment(params: {
     const now = new Date().toISOString();
     let left = amount;
     const allocations: PaymentAllocation[] = [];
+    // Un billet est entièrement une contrepartie ; une place des fêtes aussi.
+    let nonDeductible = params.eventId ? amount : 0;
 
     for (const snap of pledgeSnaps) {
       if (!snap.exists) continue;
@@ -84,6 +87,7 @@ export async function recordPayment(params: {
         updatedAt: now,
       });
       allocations.push({ pledgeId: p.id, amount: round2(part) });
+      if (p.kind === "place" && !params.eventId) nonDeductible = round2(nonDeductible + part);
       left = round2(left - part);
       if (left <= 0) break;
     }
@@ -100,6 +104,9 @@ export async function recordPayment(params: {
       allocations,
       unallocated: left,
       campaignId: params.campaignId || null,
+      eventId: params.eventId || null,
+      nonDeductible,
+      depositId: null,
       stripeCheckoutSessionId: params.stripeCheckoutSessionId || null,
       createdBy: params.createdBy,
       createdByName: params.createdByName,

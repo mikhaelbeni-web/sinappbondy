@@ -107,6 +107,10 @@ export interface PaymentDoc {
   allocations: PaymentAllocation[]; // promesses soldées par ce paiement
   unallocated: number; // reliquat non affecté (avoir), ou don libre
   campaignId?: string | null; // don fait depuis une page de campagne
+  eventId?: string | null; // billet d'événement
+  // Part sans droit à reçu fiscal (contrepartie : billet, place des fêtes).
+  nonDeductible?: number;
+  depositId?: string | null; // remise en banque (chèques, espèces)
   stripeCheckoutSessionId: string | null;
   receiptId?: string | null; // reçu fiscal qui couvre ce paiement
   createdBy: string;
