@@ -19,6 +19,8 @@ export async function recordPayment(params: {
   date: string;
   notes?: string;
   pledgeId?: string | null;
+  allocate?: boolean; // false : don libre, non affecté aux promesses
+  campaignId?: string | null;
   stripeCheckoutSessionId?: string | null;
   createdBy: string;
   createdByName: string;
@@ -31,7 +33,9 @@ export async function recordPayment(params: {
   // dans une transaction Admin sans where indexé) ; on relit chaque
   // promesse dans la transaction pour un cumul exact.
   let candidateIds: string[];
-  if (params.pledgeId) {
+  if (params.allocate === false) {
+    candidateIds = [];
+  } else if (params.pledgeId) {
     candidateIds = [params.pledgeId];
   } else {
     const snap = await db.collection("pledges").where("donorId", "==", params.donorId).get();
@@ -95,6 +99,7 @@ export async function recordPayment(params: {
       notes: params.notes || "",
       allocations,
       unallocated: left,
+      campaignId: params.campaignId || null,
       stripeCheckoutSessionId: params.stripeCheckoutSessionId || null,
       createdBy: params.createdBy,
       createdByName: params.createdByName,
@@ -161,14 +166,23 @@ function linkSecret(): string {
 
 export type PayTarget = { kind: "pledge" | "donor"; id: string };
 
+// Signature HMAC tronquée, réutilisée pour les liens de connexion à l'espace fidèle.
+export function signValue(value: string): string {
+  return createHmac("sha256", linkSecret()).update(value).digest("hex").slice(0, 32);
+}
+
+export function safeEqual(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b || "");
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
 export function signPayTarget(t: PayTarget): string {
-  return createHmac("sha256", linkSecret()).update(`${t.kind}:${t.id}`).digest("hex").slice(0, 32);
+  return signValue(`${t.kind}:${t.id}`);
 }
 
 export function verifyPayTarget(t: PayTarget, token: string): boolean {
-  const expected = Buffer.from(signPayTarget(t));
-  const given = Buffer.from(token || "");
-  return expected.length === given.length && timingSafeEqual(expected, given);
+  return safeEqual(signPayTarget(t), token);
 }
 
 export function payUrl(t: PayTarget): string {

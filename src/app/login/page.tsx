@@ -62,6 +62,10 @@ export default function LoginPage() {
             {loading ? "Connexion…" : "Se connecter"}
           </button>
         </form>
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Vous êtes fidèle ? <a href="/espace" className="text-gold hover:underline">Accédez à votre espace</a> ·{" "}
+          <a href="/don" className="text-gold hover:underline">Faire un don</a>
+        </p>
       </div>
     </div>
   );

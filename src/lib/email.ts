@@ -92,6 +92,8 @@ export async function sendStatementEmail(params: {
         </a>
       </p>
       <p>Toda raba pour votre générosité.</p>
+      <p style="font-size:13px;">Retrouvez à tout moment vos dons et reçus fiscaux dans votre
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || ""}/espace" style="color:#b8860b;">espace fidèle</a>.</p>
       <p style="color:#666;font-size:12px;">Si le bouton ne fonctionne pas, copiez ce lien : ${params.payUrl}</p>
     </div>
   `;
@@ -150,5 +152,33 @@ export async function sendReceiptEmail(params: {
     html,
     attachments: [{ filename: `recu-fiscal-${params.number}.pdf`, content: params.pdf }],
   });
+  return { sent: true };
+}
+
+// Lien de connexion à l'espace fidèle.
+export async function sendDonorLoginEmail(params: { to: string; donorName: string; url: string }) {
+  const resend = getResend();
+  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const subject = `Votre accès à l'espace fidèle - ${synagogueName}`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(synagogueName)}</h2>
+      <p>Chalom ${escapeHtml(params.donorName)},</p>
+      <p>Cliquez ci-dessous pour accéder à votre espace : vos promesses, vos paiements et vos reçus fiscaux.</p>
+      <p style="text-align: center; margin: 32px 0;">
+        <a href="${params.url}"
+           style="background:#b8860b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;">
+          Accéder à mon espace
+        </a>
+      </p>
+      <p style="color:#666;font-size:12px;">Ce lien est personnel et valable 30 jours. Si vous n'avez rien demandé, ignorez cet e-mail.</p>
+    </div>
+  `;
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY absent — lien de connexion non envoyé:", { to: params.to });
+    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  }
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  await resend.emails.send({ from, to: params.to, subject, html });
   return { sent: true };
 }

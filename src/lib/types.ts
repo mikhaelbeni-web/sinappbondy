@@ -100,7 +100,8 @@ export interface PaymentDoc {
   date: string; // yyyy-mm-dd, date d'encaissement
   notes: string;
   allocations: PaymentAllocation[]; // promesses soldées par ce paiement
-  unallocated: number; // reliquat non affecté (avoir)
+  unallocated: number; // reliquat non affecté (avoir), ou don libre
+  campaignId?: string | null; // don fait depuis une page de campagne
   stripeCheckoutSessionId: string | null;
   receiptId?: string | null; // reçu fiscal qui couvre ce paiement
   createdBy: string;
@@ -145,4 +146,16 @@ export interface SessionUser {
   name: string;
   roleId: string;
   role: RoleDoc | null;
+}
+
+export interface CampaignDoc {
+  id: string;
+  slug: string; // adresse publique /don/<slug>
+  title: string;
+  description: string;
+  goal: number; // objectif en euros (0 = sans objectif)
+  suggestedAmounts: number[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

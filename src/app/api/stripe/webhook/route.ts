@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { getStripe } from "@/lib/stripe";
 import { recordPayment } from "@/lib/payments";
 import { autoReceiptForPayment } from "@/lib/receipts";
+import { findOrCreateDonor } from "@/lib/donors";
 
 // Stripe a besoin du corps brut de la requête pour vérifier la signature.
 export const runtime = "nodejs";
@@ -41,12 +42,28 @@ export async function POST(req: NextRequest) {
       if (snap.exists) donorId = (snap.data() as any).donorId;
     }
 
+    const isDonation = session.metadata?.kind === "don";
+    if (isDonation && amount > 0) {
+      const m = session.metadata;
+      donorId = await findOrCreateDonor({
+        firstName: m.firstName,
+        lastName: m.lastName,
+        email: m.email,
+        address: m.address,
+        postalCode: m.postalCode,
+        city: m.city,
+      });
+    }
+
     if (donorId && amount > 0) {
       // L'id du paiement = id de la session : un webhook rejoué ne compte pas deux fois.
       const payment = await recordPayment({
         id: session.id,
         donorId,
         pledgeId: pledgeId || null,
+        // Un don libre ne vient pas solder les promesses du fidèle.
+        allocate: !isDonation,
+        campaignId: session.metadata?.campaignId || null,
         amount,
         method: "cb_en_ligne",
         reference: session.payment_intent || session.id,
