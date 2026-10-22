@@ -182,3 +182,41 @@ export async function sendDonorLoginEmail(params: { to: string; donorName: strin
   await resend.emails.send({ from, to: params.to, subject, html });
   return { sent: true };
 }
+
+// Message groupé (annonce, newsletter) : envoi par lots de 100 via l'API
+// batch de Resend, un e-mail personnalisé par destinataire.
+export async function sendBulkMessages(
+  messages: { to: string; subject: string; html: string }[]
+): Promise<{ sent: number; failed: number; reason?: string }> {
+  const resend = getResend();
+  if (!resend) return { sent: 0, failed: messages.length, reason: "RESEND_API_KEY manquant" };
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  let sent = 0;
+  let failed = 0;
+  for (let i = 0; i < messages.length; i += 100) {
+    const chunk = messages.slice(i, i + 100);
+    const { error } = await resend.batch.send(chunk.map((m) => ({ from, ...m })));
+    if (error) {
+      console.error("[email] lot non envoyé:", error);
+      failed += chunk.length;
+    } else sent += chunk.length;
+  }
+  return { sent, failed };
+}
+
+export function messageHtml(params: { synagogueName: string; body: string; unsubscribeUrl: string }) {
+  const paragraphs = escapeHtml(params.body)
+    .split(/\n{2,}/)
+    .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+  return `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(params.synagogueName)}</h2>
+      ${paragraphs}
+      <p style="color:#999;font-size:11px;margin-top:32px;">
+        Vous recevez ce message car vous êtes inscrit auprès de ${escapeHtml(params.synagogueName)}.
+        <a href="${params.unsubscribeUrl}" style="color:#999;">Ne plus recevoir ces messages</a>.
+      </p>
+    </div>
+  `;
+}

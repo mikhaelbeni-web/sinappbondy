@@ -3,7 +3,10 @@ export default function MerciPage({ searchParams }: { searchParams: Record<strin
   let title = "Toda raba !";
   let text = "Votre don a bien été enregistré. Merci infiniment pour votre générosité envers la synagogue.";
 
-  if (searchParams.deja) {
+  if (searchParams.desinscrit) {
+    title = "Désinscription enregistrée";
+    text = "Vous ne recevrez plus les messages groupés de la synagogue. Les rappels de dons et reçus fiscaux restent envoyés.";
+  } else if (searchParams.deja) {
     title = "Rien à régler";
     text = "Ce montant a déjà été réglé. Merci pour votre générosité.";
   } else if (searchParams.annule) {

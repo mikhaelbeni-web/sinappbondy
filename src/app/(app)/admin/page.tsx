@@ -5,13 +5,13 @@ import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { ASSOCIATION_CATEGORIES } from "@/lib/association";
 
-type Tab = "postes" | "equipe" | "association" | "paiements";
+type Tab = "postes" | "equipe" | "association" | "relances" | "paiements";
 
 export default function AdminPage() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<Tab>("postes");
+  const [tab, setTab] = useState<Tab>(can("gerer_postes") ? "postes" : can("gerer_paiements") ? "association" : "relances");
 
-  if (!can("gerer_equipe") && !can("gerer_postes") && !can("gerer_paiements")) {
+  if (!can("gerer_equipe") && !can("gerer_postes") && !can("gerer_paiements") && !can("envoyer_relances")) {
     return <p className="text-gray-500">Vous n'avez pas accès à l'administration.</p>;
   }
 
@@ -19,6 +19,7 @@ export default function AdminPage() {
     { key: "postes", label: "Postes & autorisations", show: can("gerer_postes") },
     { key: "equipe", label: "Équipe", show: can("gerer_equipe") },
     { key: "association", label: "Association & reçus fiscaux", show: can("gerer_paiements") },
+    { key: "relances", label: "Relances automatiques", show: can("envoyer_relances") },
     { key: "paiements", label: "Paiements", show: can("gerer_paiements") },
   ];
 
@@ -42,6 +43,7 @@ export default function AdminPage() {
       {tab === "postes" && can("gerer_postes") && <RolesTab />}
       {tab === "equipe" && can("gerer_equipe") && <TeamTab />}
       {tab === "association" && can("gerer_paiements") && <AssociationTab />}
+      {tab === "relances" && can("envoyer_relances") && <RemindersTab />}
       {tab === "paiements" && can("gerer_paiements") && <PaymentsTab />}
     </div>
   );
@@ -472,5 +474,125 @@ function AssociationTab() {
         </div>
       </div>
     </form>
+  );
+}
+
+function RemindersTab() {
+  const [data, setData] = useState<any>(null);
+  const [form, setForm] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function load() {
+    const res = await fetch("/api/reminders/auto");
+    const d = await res.json();
+    setData(d);
+    setForm(d.settings);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMessage("");
+    const res = await fetch("/api/reminders/auto", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const d = await res.json();
+    setMessage(res.ok ? "Réglages enregistrés." : d.error);
+    setBusy(false);
+    await load();
+  }
+
+  async function runNow() {
+    if (!confirm(`Envoyer maintenant ${data.plan.length} relevé(s) ?`)) return;
+    setBusy(true);
+    setMessage("");
+    const res = await fetch("/api/reminders/auto", { method: "POST" });
+    const d = await res.json();
+    if (!res.ok) setMessage(d.error);
+    else if (d.skipped) setMessage(`Aucun envoi (${d.skipped}).`);
+    else setMessage(`${d.sent} relevé(s) envoyé(s)${d.failed.length ? `, ${d.failed.length} en échec` : ""}.`);
+    setBusy(false);
+    await load();
+  }
+
+  if (!data || !form) return <p className="text-sm text-gray-500">Chargement…</p>;
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <form onSubmit={save} className="card p-4 space-y-3">
+        <p className="text-sm text-gray-600">
+          Chaque matin (10 h en été, 9 h en hiver, heure de Paris), les fidèles qui ont des promesses à relancer reçoivent un relevé unique de leur
+          solde avec un lien de paiement. Pas d'envoi le Chabbat ni les jours de fête.
+        </p>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={!!form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
+          Activer les relances automatiques
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="label">1re relance après (jours)</label>
+            <input type="number" min="0" className="input" value={form.firstDelayDays} onChange={(e) => setForm({ ...form, firstDelayDays: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Puis tous les (jours)</label>
+            <input type="number" min="1" className="input" value={form.repeatEveryDays} onChange={(e) => setForm({ ...form, repeatEveryDays: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Relances max par promesse</label>
+            <input type="number" min="1" className="input" value={form.maxReminders} onChange={(e) => setForm({ ...form, maxReminders: e.target.value })} />
+          </div>
+        </div>
+        {!data.cronConfigured && (
+          <p className="text-xs text-amber-700">
+            Variable CRON_SECRET absente dans Vercel : l'envoi quotidien ne tournera pas tant qu'elle n'est pas définie.
+          </p>
+        )}
+        <button type="submit" disabled={busy} className="btn-primary">Enregistrer</button>
+      </form>
+
+      {message && <p className="text-sm text-gray-700">{message}</p>}
+
+      <div className="card">
+        <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-ink">Prochain envoi : {data.plan.length} fidèle(s)</h3>
+            {data.restDay && <p className="text-xs text-amber-700">Aujourd'hui : {data.restDay}, aucun envoi.</p>}
+          </div>
+          <button className="btn-gold" disabled={busy || !data.plan.length || !!data.restDay} onClick={runNow}>
+            Envoyer maintenant
+          </button>
+        </div>
+        <div className="divide-y max-h-72 overflow-y-auto">
+          {data.plan.map((p: any) => (
+            <div key={p.donorId} className="p-3 px-4 flex items-center justify-between gap-3 text-sm">
+              <span className="truncate">{p.donorName}</span>
+              <span className="font-medium text-amber-700 shrink-0">
+                {p.due.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
+              </span>
+            </div>
+          ))}
+          {data.plan.length === 0 && <p className="p-4 text-sm text-gray-500">Personne à relancer selon ces réglages.</p>}
+        </div>
+      </div>
+
+      {data.runs.length > 0 && (
+        <div className="card p-4 text-sm space-y-1">
+          <h3 className="font-semibold text-ink mb-2">Derniers envois</h3>
+          {data.runs.map((r: any, i: number) => (
+            <p key={i} className="text-gray-600">
+              {new Date(r.at).toLocaleString("fr-FR")} · {r.trigger === "cron" ? "automatique" : `manuel (${r.by})`} · {r.sent} envoyé(s)
+              {r.failed?.length ? `, ${r.failed.length} en échec` : ""}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

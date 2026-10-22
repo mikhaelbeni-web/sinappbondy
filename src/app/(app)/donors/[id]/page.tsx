@@ -86,7 +86,7 @@ export default function DonorDetailPage() {
     const res = await fetch(`/api/donors/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, groups: String(form.groups || "").split(",").map((g: string) => g.trim()).filter(Boolean) }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -112,6 +112,13 @@ export default function DonorDetailPage() {
           <h1 className="text-2xl font-serif font-bold text-ink">{donor.firstName} {donor.lastName}</h1>
           <p className="text-sm text-gray-500">{donor.email || "Pas d'e-mail"} {donor.phone && `· ${donor.phone}`}</p>
           {addressLine && <p className="text-sm text-gray-500">{addressLine}</p>}
+          {donor.groups?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {donor.groups.map((g: string) => (
+                <span key={g} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">{g}</span>
+              ))}
+            </div>
+          )}
           <p className="hidden print:block text-sm text-gray-500 mt-1">Relevé au {formatDate(new Date().toISOString())}</p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
@@ -127,6 +134,8 @@ export default function DonorDetailPage() {
                   address: donor.address || "",
                   postalCode: donor.postalCode || "",
                   city: donor.city || "",
+                  groups: (donor.groups || []).join(", "),
+                  emailOptOut: !!donor.emailOptOut,
                 });
                 setEditing((v) => !v);
               }}
@@ -157,6 +166,14 @@ export default function DonorDetailPage() {
             </div>
           ))}
           <p className="sm:col-span-2 text-xs text-gray-500">L'adresse postale est obligatoire pour émettre un reçu fiscal.</p>
+          <div className="sm:col-span-2">
+            <label className="label">Groupes (séparés par des virgules)</label>
+            <input className="input" placeholder="ex : Conseil, Jeunes, Cours du mardi" value={form.groups || ""} onChange={(e) => setForm({ ...form, groups: e.target.value })} />
+          </div>
+          <label className="sm:col-span-2 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!form.emailOptOut} onChange={(e) => setForm({ ...form, emailOptOut: e.target.checked })} />
+            Ne reçoit pas les messages groupés (désinscrit)
+          </label>
           <div className="sm:col-span-2 flex flex-wrap gap-2">
             <button type="submit" className="btn-primary">Enregistrer</button>
             <button type="button" className="btn-secondary" onClick={() => setEditing(false)}>Annuler</button>

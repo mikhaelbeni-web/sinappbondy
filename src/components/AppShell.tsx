@@ -12,9 +12,10 @@ const NAV = [
   { href: "/receipts", label: "Reçus fiscaux", perm: "gerer_paiements" as const },
   { href: "/campaigns", label: "Campagnes de dons", perm: "gerer_paiements" as const },
   { href: "/donors", label: "Fidèles", perm: null },
+  { href: "/messages", label: "Messages", perm: "envoyer_messages" as const },
   { href: "/services", label: "Offices", perm: null },
   { href: "/catalog", label: "Catalogue", perm: "gerer_catalogue" as const },
-  { href: "/admin", label: "Administration", perm: "gerer_equipe" as const },
+  { href: "/admin", label: "Administration", perm: null, any: ["gerer_equipe", "gerer_postes", "gerer_paiements", "envoyer_relances"] as const },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -78,7 +79,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV.filter((item) => !item.perm || can(item.perm)).map((item) => {
+          {NAV.filter((item) => ("any" in item ? item.any!.some((p) => can(p)) : !item.perm || can(item.perm))).map((item) => {
             const active = pathname?.startsWith(item.href);
             return (
               <Link

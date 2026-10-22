@@ -26,6 +26,8 @@ export interface DonorDoc {
   address?: string;
   postalCode?: string;
   city?: string;
+  groups?: string[]; // ex. « Conseil », « Jeunes » : ciblage des messages
+  emailOptOut?: boolean; // désinscrit des messages groupés (pas des relances ni reçus)
   notes: string;
   createdAt: string;
   updatedAt: string;
