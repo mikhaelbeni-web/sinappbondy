@@ -342,3 +342,25 @@ export async function sendTicketEmail(params: {
   });
   return { sent: true };
 }
+
+export async function sendMikveEmail(params: { to: string; name: string; when: string; instructions: string; cancelUrl: string }) {
+  const resend = getResend();
+  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const subject = `Réservation du mikvé - ${params.when}`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(synagogueName)}</h2>
+      <p>Chalom ${escapeHtml(params.name)},</p>
+      <p>Votre créneau au mikvé est réservé : <strong>${escapeHtml(params.when)}</strong>.</p>
+      ${params.instructions ? `<p>${escapeHtml(params.instructions).replace(/\n/g, "<br/>")}</p>` : ""}
+      <p style="font-size:13px;color:#555;">Empêchement ? <a href="${params.cancelUrl}">Annuler la réservation</a></p>
+    </div>
+  `;
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY absent — confirmation mikvé non envoyée:", { to: params.to });
+    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  }
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  await resend.emails.send({ from, to: params.to, subject, html });
+  return { sent: true };
+}
