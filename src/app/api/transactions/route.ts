@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { PAYMENT_METHODS, recordPayment } from "@/lib/payments";
 import { todayISO } from "@/lib/format";
+import { autoReceiptForPayment } from "@/lib/receipts";
 
 // Encaissements (paiements reçus, en ligne ou hors ligne).
 export async function GET(req: NextRequest) {
@@ -47,7 +48,8 @@ export async function POST(req: NextRequest) {
       createdBy: user.uid,
       createdByName: user.name,
     });
-    return NextResponse.json({ payment });
+    const receipt = payment ? await autoReceiptForPayment(payment, user.name) : null;
+    return NextResponse.json({ payment, receipt });
   } catch (err) {
     return handleApiError(err);
   }

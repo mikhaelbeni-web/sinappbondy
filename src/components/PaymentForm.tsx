@@ -16,7 +16,7 @@ export default function PaymentForm({
   donors?: Donor[];
   fixedDonorId?: string;
   pledges?: any[]; // promesses du fidèle (fiche fidèle)
-  onSaved: () => void;
+  onSaved: (info?: { receiptNumber?: string }) => void;
 }) {
   const [donorId, setDonorId] = useState(fixedDonorId || "");
   const [donorQuery, setDonorQuery] = useState("");
@@ -58,7 +58,7 @@ export default function PaymentForm({
       setReference("");
       setNotes("");
       setPledgeId("");
-      onSaved();
+      onSaved({ receiptNumber: data.receipt?.number });
     } catch (err: any) {
       setError(err.message);
     } finally {

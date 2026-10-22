@@ -105,3 +105,50 @@ export async function sendStatementEmail(params: {
   await resend.emails.send({ from, to: params.to, subject, html });
   return { sent: true };
 }
+
+// Reçu fiscal en pièce jointe (PDF).
+export async function sendReceiptEmail(params: {
+  to: string;
+  donorName: string;
+  associationName: string;
+  number: string;
+  amount: number;
+  kind: "unitaire" | "annuel";
+  year: number;
+  pdf: Buffer;
+}) {
+  const resend = getResend();
+  const eur = params.amount.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+  const subject =
+    params.kind === "annuel"
+      ? `Votre reçu fiscal ${params.year} - ${params.associationName}`
+      : `Votre reçu fiscal n° ${params.number} - ${params.associationName}`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(params.associationName)}</h2>
+      <p>Chalom ${escapeHtml(params.donorName)},</p>
+      <p>
+        Vous trouverez ci-joint votre reçu fiscal n° <strong>${escapeHtml(params.number)}</strong>
+        pour ${params.kind === "annuel" ? `vos dons de l'année ${params.year}` : "votre don"}, d'un montant de
+        <strong>${eur}</strong>.
+      </p>
+      <p>Conservez-le : il vous permet de bénéficier de la réduction d'impôt sur le revenu.</p>
+      <p>Toda raba pour votre générosité.</p>
+    </div>
+  `;
+
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY absent — reçu non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  }
+
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  await resend.emails.send({
+    from,
+    to: params.to,
+    subject,
+    html,
+    attachments: [{ filename: `recu-fiscal-${params.number}.pdf`, content: params.pdf }],
+  });
+  return { sent: true };
+}

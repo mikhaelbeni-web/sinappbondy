@@ -118,6 +118,11 @@ export async function deletePayment(paymentId: string): Promise<void> {
       throw err;
     }
     const payment = snap.data() as PaymentDoc;
+    if (payment.receiptId) {
+      const err: any = new Error("Ce paiement figure sur un reçu fiscal : annulez d'abord le reçu.");
+      err.status = 409;
+      throw err;
+    }
     const refs = payment.allocations.map((a) => db.collection("pledges").doc(a.pledgeId));
     const pledgeSnaps = refs.length ? await tx.getAll(...refs) : [];
     const now = new Date().toISOString();

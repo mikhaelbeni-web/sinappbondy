@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
+import { ASSOCIATION_CATEGORIES } from "@/lib/association";
 
-type Tab = "postes" | "equipe" | "paiements";
+type Tab = "postes" | "equipe" | "association" | "paiements";
 
 export default function AdminPage() {
   const { can } = useAuth();
@@ -17,6 +18,7 @@ export default function AdminPage() {
   const tabs: { key: Tab; label: string; show: boolean }[] = [
     { key: "postes", label: "Postes & autorisations", show: can("gerer_postes") },
     { key: "equipe", label: "Équipe", show: can("gerer_equipe") },
+    { key: "association", label: "Association & reçus fiscaux", show: can("gerer_paiements") },
     { key: "paiements", label: "Paiements", show: can("gerer_paiements") },
   ];
 
@@ -39,6 +41,7 @@ export default function AdminPage() {
 
       {tab === "postes" && can("gerer_postes") && <RolesTab />}
       {tab === "equipe" && can("gerer_equipe") && <TeamTab />}
+      {tab === "association" && can("gerer_paiements") && <AssociationTab />}
       {tab === "paiements" && can("gerer_paiements") && <PaymentsTab />}
     </div>
   );
@@ -330,5 +333,137 @@ function Row({ label, ok }: { label: string; ok: boolean }) {
       <span>{label}</span>
       <span className={ok ? "text-green-700 font-medium" : "text-red-600 font-medium"}>{ok ? "Configuré" : "Manquant"}</span>
     </div>
+  );
+}
+
+const ASSOCIATION_FIELDS: { key: string; label: string; placeholder?: string; wide?: boolean }[] = [
+  { key: "legalName", label: "Nom de l'association (dénomination légale)", wide: true },
+  { key: "address", label: "Adresse du siège", wide: true },
+  { key: "postalCode", label: "Code postal" },
+  { key: "city", label: "Ville" },
+  { key: "rna", label: "N° RNA", placeholder: "W931234567" },
+  { key: "siren", label: "N° SIREN", placeholder: "123456789" },
+  { key: "signatoryName", label: "Nom du signataire", placeholder: "ex : David Cohen" },
+  { key: "signatoryTitle", label: "Qualité du signataire", placeholder: "ex : Président" },
+];
+
+function AssociationTab() {
+  const [form, setForm] = useState<any>(null);
+  const [missing, setMissing] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/association")
+      .then((r) => r.json())
+      .then((d) => {
+        setForm(d.association);
+        setMissing(d.missing || []);
+      });
+  }, []);
+
+  function onSignature(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 300_000) {
+      setError("Signature trop lourde (300 Ko maximum).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm((f: any) => ({ ...f, signatureImage: String(reader.result) }));
+    reader.readAsDataURL(file);
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/association", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setForm(data.association);
+      setMissing(data.missing || []);
+      setMessage("Fiche enregistrée.");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!form) return <p className="text-sm text-gray-500">Chargement…</p>;
+
+  return (
+    <form onSubmit={save} className="space-y-4 max-w-2xl">
+      <div className={`card p-4 text-sm ${missing.length ? "border-amber-300 bg-amber-50" : "border-green-300 bg-green-50"}`}>
+        {missing.length ? (
+          <>
+            <p className="font-medium text-amber-800">Reçus fiscaux inactifs : la fiche est incomplète.</p>
+            <p className="text-amber-700 mt-1">À renseigner : {missing.join(", ")}.</p>
+          </>
+        ) : (
+          <p className="font-medium text-green-800">
+            Reçus fiscaux actifs. {form.autoReceipt ? "Un reçu part automatiquement à chaque paiement (si l'adresse du fidèle est connue)." : "Émission manuelle depuis la page Reçus fiscaux."}
+          </p>
+        )}
+      </div>
+
+      <div className="card p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {error && <p className="sm:col-span-2 text-sm text-red-600">{error}</p>}
+        {message && <p className="sm:col-span-2 text-sm text-green-700">{message}</p>}
+        {ASSOCIATION_FIELDS.map((f) => (
+          <div key={f.key} className={f.wide ? "sm:col-span-2" : ""}>
+            <label className="label">{f.label}</label>
+            <input className="input" placeholder={f.placeholder} value={form[f.key] || ""} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+          </div>
+        ))}
+        <div className="sm:col-span-2">
+          <label className="label">Objet de l'association (tel qu'inscrit dans les statuts)</label>
+          <textarea className="input" rows={2} value={form.object || ""} onChange={(e) => setForm({ ...form, object: e.target.value })} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">Qualité de l'organisme (case cochée sur le reçu)</label>
+          <select className="input" value={form.category || ""} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+            <option value="">— Choisir —</option>
+            {ASSOCIATION_CATEGORIES.map((c) => (
+              <option key={c.key} value={c.key}>{c.label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Association loi 1901 : en général « œuvre d'intérêt général ». Association cultuelle loi 1905 : « association cultuelle ». En cas de doute, demandez au comptable.
+          </p>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">Signature (image PNG ou JPEG, facultative)</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <input type="file" accept="image/png,image/jpeg" onChange={(e) => onSignature(e.target.files?.[0])} className="text-sm" />
+            {form.signatureImage && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={form.signatureImage} alt="Signature" className="h-12 border rounded bg-white" />
+                <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => setForm({ ...form, signatureImage: "" })}>
+                  Retirer
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <label className="sm:col-span-2 flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-1" checked={!!form.autoReceipt} onChange={(e) => setForm({ ...form, autoReceipt: e.target.checked })} />
+          <span>Envoyer automatiquement un reçu fiscal à chaque paiement. Décochez pour n'émettre qu'un reçu récapitulatif annuel.</span>
+        </label>
+        <div className="sm:col-span-2">
+          <button type="submit" disabled={saving} className="btn-gold">
+            {saving ? "Enregistrement…" : "Enregistrer la fiche"}
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }

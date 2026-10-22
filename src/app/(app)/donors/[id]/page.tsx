@@ -13,6 +13,7 @@ export default function DonorDetailPage() {
   const [donor, setDonor] = useState<any>(null);
   const [pledges, setPledges] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [receipts, setReceipts] = useState<any[]>([]);
   const [balancePayUrl, setBalancePayUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reminding, setReminding] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export default function DonorDetailPage() {
     setDonor(data.donor);
     setPledges(data.pledges || []);
     setPayments(data.payments || []);
+    setReceipts(data.receipts || []);
     setBalancePayUrl(data.balancePayUrl || null);
     setLoading(false);
   }
@@ -154,7 +156,7 @@ export default function DonorDetailPage() {
               <input className="input" value={form[key] || ""} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
             </div>
           ))}
-          <p className="sm:col-span-2 text-xs text-gray-500">L'adresse postale sera nécessaire pour les reçus fiscaux.</p>
+          <p className="sm:col-span-2 text-xs text-gray-500">L'adresse postale est obligatoire pour émettre un reçu fiscal.</p>
           <div className="sm:col-span-2 flex flex-wrap gap-2">
             <button type="submit" className="btn-primary">Enregistrer</button>
             <button type="button" className="btn-secondary" onClick={() => setEditing(false)}>Annuler</button>
@@ -202,9 +204,9 @@ export default function DonorDetailPage() {
           <PaymentForm
             fixedDonorId={id}
             pledges={pledges}
-            onSaved={() => {
+            onSaved={(info) => {
               setShowPayment(false);
-              setMessage("Paiement enregistré.");
+              setMessage(info?.receiptNumber ? `Paiement enregistré, reçu fiscal n° ${info.receiptNumber} émis.` : "Paiement enregistré.");
               load();
             }}
           />
@@ -271,7 +273,34 @@ export default function DonorDetailPage() {
                     <p className="text-purple-700 text-xs">Dont {formatEUR(p.unallocated)} non affecté (avoir)</p>
                   )}
                 </div>
-                <span className="font-semibold text-green-700">{formatEUR(p.amount)}</span>
+                <div className="flex items-center gap-3 shrink-0">
+                  {p.receiptId && <span className="text-xs text-gray-500">reçu émis</span>}
+                  <span className="font-semibold text-green-700">{formatEUR(p.amount)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {can("gerer_paiements") && receipts.length > 0 && (
+        <div className="card print:hidden">
+          <div className="p-4 border-b">
+            <h2 className="font-semibold text-ink">Reçus fiscaux</h2>
+          </div>
+          <div className="divide-y">
+            {receipts.map((r) => (
+              <div key={r.id} className={`p-4 flex items-center justify-between gap-3 text-sm ${r.cancelled ? "opacity-60" : ""}`}>
+                <span className="min-w-0 truncate">
+                  N° {r.number} · {r.kind === "annuel" ? `récapitulatif ${r.year}` : formatDate(r.periodStart)}
+                  {r.cancelled && " · annulé"}
+                </span>
+                <span className="flex items-center gap-3 shrink-0">
+                  <span className="font-semibold">{formatEUR(r.amount)}</span>
+                  <a href={`/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold text-xs hover:underline">
+                    PDF
+                  </a>
+                </span>
               </div>
             ))}
           </div>

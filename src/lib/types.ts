@@ -102,9 +102,41 @@ export interface PaymentDoc {
   allocations: PaymentAllocation[]; // promesses soldées par ce paiement
   unallocated: number; // reliquat non affecté (avoir)
   stripeCheckoutSessionId: string | null;
+  receiptId?: string | null; // reçu fiscal qui couvre ce paiement
   createdBy: string;
   createdByName: string;
   createdAt: string;
+}
+
+export interface ReceiptDoc {
+  id: string;
+  number: string; // numéro d'ordre, ex. 2026-0001
+  year: number;
+  kind: "unitaire" | "annuel";
+  donorId: string;
+  donor: { name: string; address: string; postalCode: string; city: string; email: string };
+  amount: number;
+  payments: { id: string; date: string; amount: number; method: PaymentMethod }[];
+  periodStart: string; // yyyy-mm-dd (= date du don pour un reçu unitaire)
+  periodEnd: string;
+  // Copie de la fiche association au moment de l'émission (hors signature).
+  association: {
+    legalName: string;
+    address: string;
+    postalCode: string;
+    city: string;
+    object: string;
+    rna: string;
+    siren: string;
+    category: string;
+    signatoryName: string;
+    signatoryTitle: string;
+  };
+  issuedAt: string;
+  issuedBy: string;
+  emailedAt: string | null;
+  cancelled: boolean;
+  cancelledAt: string | null;
 }
 
 export interface SessionUser {

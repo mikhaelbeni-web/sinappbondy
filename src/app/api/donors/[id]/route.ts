@@ -19,8 +19,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
     let payments: any[] = [];
+    let receipts: any[] = [];
     if (hasPermission(user.role, "gerer_paiements")) {
-      const paySnap = await adminDb().collection("payments").where("donorId", "==", params.id).get();
+      const [paySnap, receiptSnap] = await Promise.all([
+        adminDb().collection("payments").where("donorId", "==", params.id).get(),
+        adminDb().collection("receipts").where("donorId", "==", params.id).get(),
+      ]);
+      receipts = receiptSnap.docs.map((d) => d.data() as any).sort((a, b) => (a.number < b.number ? 1 : -1));
       payments = paySnap.docs
         .map((d) => d.data() as any)
         .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1));
@@ -32,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       balancePayUrl = payUrl({ kind: "donor", id: params.id });
     } catch {}
 
-    return NextResponse.json({ donor: snap.data(), pledges, payments, balancePayUrl });
+    return NextResponse.json({ donor: snap.data(), pledges, payments, receipts, balancePayUrl });
   } catch (err) {
     return handleApiError(err);
   }

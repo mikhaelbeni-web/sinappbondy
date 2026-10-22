@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { getStripe } from "@/lib/stripe";
 import { recordPayment } from "@/lib/payments";
+import { autoReceiptForPayment } from "@/lib/receipts";
 
 // Stripe a besoin du corps brut de la requête pour vérifier la signature.
 export const runtime = "nodejs";
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     if (donorId && amount > 0) {
       // L'id du paiement = id de la session : un webhook rejoué ne compte pas deux fois.
-      await recordPayment({
+      const payment = await recordPayment({
         id: session.id,
         donorId,
         pledgeId: pledgeId || null,
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
         createdBy: "stripe",
         createdByName: "Paiement en ligne",
       });
+      if (payment) await autoReceiptForPayment(payment, "Paiement en ligne");
     }
   }
 
