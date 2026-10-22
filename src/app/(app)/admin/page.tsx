@@ -5,13 +5,15 @@ import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { ASSOCIATION_CATEGORIES } from "@/lib/association";
 
-type Tab = "postes" | "equipe" | "association" | "relances" | "paiements";
+type Tab = "postes" | "equipe" | "association" | "relances" | "paiements" | "louah";
 
 export default function AdminPage() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<Tab>(can("gerer_postes") ? "postes" : can("gerer_paiements") ? "association" : "relances");
+  const [tab, setTab] = useState<Tab>(
+    can("gerer_postes") ? "postes" : can("gerer_paiements") ? "association" : can("envoyer_relances") ? "relances" : "louah"
+  );
 
-  if (!can("gerer_equipe") && !can("gerer_postes") && !can("gerer_paiements") && !can("envoyer_relances")) {
+  if (!can("gerer_equipe") && !can("gerer_postes") && !can("gerer_paiements") && !can("envoyer_relances") && !can("gerer_offices")) {
     return <p className="text-gray-500">Vous n'avez pas accès à l'administration.</p>;
   }
 
@@ -21,6 +23,7 @@ export default function AdminPage() {
     { key: "association", label: "Association & reçus fiscaux", show: can("gerer_paiements") },
     { key: "relances", label: "Relances automatiques", show: can("envoyer_relances") },
     { key: "paiements", label: "Paiements", show: can("gerer_paiements") },
+    { key: "louah", label: "Écran louah", show: can("gerer_offices") },
   ];
 
   return (
@@ -45,6 +48,7 @@ export default function AdminPage() {
       {tab === "association" && can("gerer_paiements") && <AssociationTab />}
       {tab === "relances" && can("envoyer_relances") && <RemindersTab />}
       {tab === "paiements" && can("gerer_paiements") && <PaymentsTab />}
+      {tab === "louah" && can("gerer_offices") && <LouahTab />}
     </div>
   );
 }
@@ -593,6 +597,99 @@ function RemindersTab() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function LouahTab() {
+  const [s, setS] = useState<any>(null);
+  const [url, setUrl] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/louah")
+      .then((r) => r.json())
+      .then((d) => {
+        setS(d.settings);
+        setUrl(d.url);
+      });
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    setMessage("");
+    const res = await fetch("/api/louah", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
+    const d = await res.json();
+    setMessage(res.ok ? "Enregistré. L'écran se met à jour dans les 5 minutes." : d.error);
+    setSaving(false);
+  }
+
+  if (!s) return <p className="text-gray-500">Chargement…</p>;
+
+  const setTime = (i: number, key: "label" | "value", v: string) =>
+    setS({ ...s, times: s.times.map((t: any, j: number) => (j === i ? { ...t, [key]: v } : t)) });
+
+  return (
+    <div className="card p-4 space-y-4">
+      <p className="text-sm text-gray-600">
+        Ouvrez <a className="text-gold hover:underline break-all" href={url || "/louah"} target="_blank" rel="noreferrer">{url || "/louah"}</a> sur
+        l'écran de la synagogue (double-clic pour le plein écran). Dates hébraïques, paracha, zmanim et allumage sont calculés automatiquement ;
+        les offices saisis dans l'onglet Offices et les hazkarot de la semaine s'affichent aussi.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="label">Titre affiché</label>
+          <input className="input" value={s.title} onChange={(e) => setS({ ...s, title: e.target.value })} placeholder="ex : Synagogue de Bondy" />
+        </div>
+        <div>
+          <label className="label">Ville (zmanim)</label>
+          <input className="input" value={s.city} onChange={(e) => setS({ ...s, city: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Latitude</label>
+          <input type="number" step="0.0001" className="input" value={s.latitude} onChange={(e) => setS({ ...s, latitude: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Longitude</label>
+          <input type="number" step="0.0001" className="input" value={s.longitude} onChange={(e) => setS({ ...s, longitude: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Allumage (minutes avant le coucher du soleil)</label>
+          <input type="number" className="input" value={s.candleMinutes} onChange={(e) => setS({ ...s, candleMinutes: e.target.value })} />
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 text-sm">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={s.showZmanim} onChange={(e) => setS({ ...s, showZmanim: e.target.checked })} /> Afficher les zmanim
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={s.showHazkarot} onChange={(e) => setS({ ...s, showHazkarot: e.target.checked })} /> Afficher les hazkarot (nom du défunt et date)
+        </label>
+      </div>
+      <div>
+        <label className="label">Horaires des offices</label>
+        <div className="space-y-2">
+          {s.times.map((t: any, i: number) => (
+            <div key={i} className="flex flex-col sm:flex-row gap-2">
+              <input className="input" placeholder="ex : Cha'harit en semaine" value={t.label} onChange={(e) => setTime(i, "label", e.target.value)} />
+              <input className="input sm:w-40" placeholder="ex : 7h00" value={t.value} onChange={(e) => setTime(i, "value", e.target.value)} />
+              <button className="text-red-600 hover:underline text-sm shrink-0 text-left" onClick={() => setS({ ...s, times: s.times.filter((_: any, j: number) => j !== i) })}>
+                Retirer
+              </button>
+            </div>
+          ))}
+          <button className="text-gold hover:underline text-sm" onClick={() => setS({ ...s, times: [...s.times, { label: "", value: "" }] })}>
+            + Ajouter un horaire
+          </button>
+        </div>
+      </div>
+      <div>
+        <label className="label">Annonces (une par ligne)</label>
+        <textarea className="input" rows={4} value={s.announcements} onChange={(e) => setS({ ...s, announcements: e.target.value })} />
+      </div>
+      {message && <p className="text-sm text-gray-700">{message}</p>}
+      <button className="btn-primary" disabled={saving} onClick={save}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
     </div>
   );
 }

@@ -21,7 +21,7 @@ const NAV = [
   { href: "/hazkarot", label: "Hazkarot", perm: null },
   { href: "/mikve-reservations", label: "Mikvé", perm: "gerer_offices" as const },
   { href: "/catalog", label: "Catalogue", perm: "gerer_catalogue" as const },
-  { href: "/admin", label: "Administration", perm: null, any: ["gerer_equipe", "gerer_postes", "gerer_paiements", "envoyer_relances"] as const },
+  { href: "/admin", label: "Administration", perm: null, any: ["gerer_equipe", "gerer_postes", "gerer_paiements", "envoyer_relances", "gerer_offices"] as const },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
