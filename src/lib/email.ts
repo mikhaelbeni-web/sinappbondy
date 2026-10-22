@@ -150,7 +150,7 @@ export async function sendReceiptEmail(params: {
     to: params.to,
     subject,
     html,
-    attachments: [{ filename: `recu-fiscal-${params.number}.pdf`, content: params.pdf }],
+    attachments: [{ filename: `recu-fiscal-${params.number.replace("/", "-")}.pdf`, content: params.pdf }],
   });
   return { sent: true };
 }

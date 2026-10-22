@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest) {
       if (key === "autoReceipt") {
         if (typeof v === "boolean") update.autoReceipt = v;
       } else if (typeof v === "string") {
-        update[key] = key === "signatureImage" ? v : v.trim();
+        update[key] = key === "signatureImage" || key === "logoImage" ? v : v.trim();
       }
     }
     if (update.category && !ASSOCIATION_CATEGORIES.some((c) => c.key === update.category)) {
@@ -36,9 +36,11 @@ export async function PUT(req: NextRequest) {
     if (update.rna) update.rna = update.rna.toUpperCase();
     if (update.siren) update.siren = update.siren.replace(/\s/g, "");
     if (update.siren && !/^\d{9}$/.test(update.siren)) return jsonError("Le SIREN doit compter 9 chiffres.", 400);
-    if (update.signatureImage) {
-      if (!/^data:image\/(png|jpe?g);base64,/.test(update.signatureImage)) return jsonError("Signature : image PNG ou JPEG attendue.", 400);
-      if (update.signatureImage.length > 400_000) return jsonError("Signature trop lourde (300 Ko maximum).", 400);
+    for (const [key, label] of [["signatureImage", "Signature"], ["logoImage", "Logo"]] as const) {
+      const img = update[key];
+      if (!img) continue;
+      if (!/^data:image\/(png|jpe?g);base64,/.test(img)) return jsonError(`${label} : image PNG ou JPEG attendue.`, 400);
+      if (img.length > 400_000) return jsonError(`${label} trop lourd(e) (300 Ko maximum).`, 400);
     }
     update.updatedAt = new Date().toISOString();
 

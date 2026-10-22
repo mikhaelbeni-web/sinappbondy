@@ -111,7 +111,7 @@ export interface PaymentDoc {
 
 export interface ReceiptDoc {
   id: string;
-  number: string; // numéro d'ordre, ex. 2026-0001
+  number: string; // numéro d'ordre, ex. 2026/00001
   year: number;
   kind: "unitaire" | "annuel";
   donorId: string;

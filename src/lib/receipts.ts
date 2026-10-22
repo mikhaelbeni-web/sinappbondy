@@ -65,7 +65,7 @@ export async function issueReceipt(params: {
     const now = new Date().toISOString();
     const receipt: ReceiptDoc = {
       id: receiptRef.id,
-      number: `${year}-${String(next).padStart(4, "0")}`,
+      number: `${year}/${String(next).padStart(5, "0")}`,
       year,
       kind: params.kind,
       donorId: params.donorId,
@@ -127,7 +127,7 @@ export async function cancelReceipt(receiptId: string): Promise<void> {
 export async function emailReceipt(receipt: ReceiptDoc, association?: AssociationSettings): Promise<{ sent: boolean; reason?: string }> {
   if (!receipt.donor.email) return { sent: false, reason: "pas d'e-mail" };
   const a = association || (await getAssociation());
-  const pdf = await renderReceiptPdf(receipt, a.signatureImage);
+  const pdf = await renderReceiptPdf(receipt, a.signatureImage, a.logoImage);
   const result = await sendReceiptEmail({
     to: receipt.donor.email,
     donorName: receipt.donor.name,

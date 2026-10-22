@@ -1,15 +1,19 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { ASSOCIATION_CATEGORIES } from "./association";
 import { euroAmountToWords } from "./numberToWords";
 import type { ReceiptDoc } from "./types";
 
-// Reçu au format du modèle Cerfa 11580 (toutes les mentions obligatoires),
-// généré à la volée à partir du reçu enregistré.
+// Reçu fiscal Cerfa n° 11580*05 (2041-RD), mise en page calquée sur les
+// reçus usuels : en-tête Cerfa, blocs Bénéficiaire / Donateur encadrés,
+// cases 200 / 238 bis / 978, date et signature à droite.
 
 const A4 = { w: 595.28, h: 841.89 };
-const M = 42; // marge
-const INK = rgb(0.1, 0.1, 0.18);
-const GREY = rgb(0.4, 0.4, 0.45);
+const M = 44;
+const CW = A4.w - 2 * M; // largeur utile
+const INK = rgb(0.13, 0.13, 0.15);
+const GREY = rgb(0.45, 0.45, 0.48);
+const LINE = rgb(0.6, 0.6, 0.62);
+const BAR = rgb(0.82, 0.82, 0.84);
 
 // Les polices standard PDF ne codent que WinAnsi : on remplace le reste.
 const WINANSI_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
@@ -22,9 +26,9 @@ function clean(s: string): string {
     .replace(/[\u0000-\u0008\u000b-\u001f]/g, "");
 }
 
-function eur(n: number): string {
-  // toLocaleString utilise des espaces insécables fines (hors WinAnsi).
-  return n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/[  ]/g, " ") + " €";
+function eurShort(n: number): string {
+  const s = n.toLocaleString("fr-FR", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+  return s.replace(/[  ]/g, " ");
 }
 
 function frDate(iso: string): string {
@@ -32,29 +36,63 @@ function frDate(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-const METHOD_GROUP: Record<string, "especes" | "cheque" | "virement_cb"> = {
-  especes: "especes",
-  cheque: "cheque",
-  virement: "virement_cb",
-  cb_en_ligne: "virement_cb",
-  cb_terminal: "virement_cb",
+const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+function longDate(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d} ${MONTHS[Number(m) - 1]} ${y}`;
+}
+
+const METHOD_TEXT: Record<string, string> = {
+  cb_en_ligne: "Paiement en ligne",
+  cb_terminal: "Carte bancaire",
+  cheque: "Chèque",
+  especes: "Espèces",
+  virement: "Virement",
 };
 
-class Writer {
-  y = A4.h - M;
+async function embedDataUrl(pdf: PDFDocument, dataUrl?: string): Promise<PDFImage | null> {
+  const m = dataUrl?.match(/^data:image\/(png|jpe?g);base64,(.+)$/);
+  if (!m) return null;
+  try {
+    const bytes = Buffer.from(m[2], "base64");
+    return m[1] === "png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+  } catch (e) {
+    console.warn("[receiptPdf] image illisible:", e);
+    return null;
+  }
+}
+
+class Draw {
   constructor(
     public page: PDFPage,
     public font: PDFFont,
     public bold: PDFFont
   ) {}
 
-  wrap(text: string, size: number, font: PDFFont, width: number): string[] {
+  width(t: string, size: number, b = false) {
+    return (b ? this.bold : this.font).widthOfTextAtSize(clean(t), size);
+  }
+
+  // Texte à la position (x, y = ligne de base).
+  text(t: string, x: number, y: number, size: number, b = false, color = INK) {
+    this.page.drawText(clean(t), { x, y, size, font: b ? this.bold : this.font, color });
+  }
+
+  centered(t: string, cx: number, y: number, size: number, b = false, color = INK) {
+    this.text(t, cx - this.width(t, size, b) / 2, y, size, b, color);
+  }
+
+  right(t: string, rx: number, y: number, size: number, b = false, color = INK) {
+    this.text(t, rx - this.width(t, size, b), y, size, b, color);
+  }
+
+  wrap(t: string, size: number, maxW: number, b = false): string[] {
     const lines: string[] = [];
-    for (const para of clean(text).split("\n")) {
+    for (const para of clean(t).split("\n")) {
       let line = "";
       for (const word of para.split(/\s+/)) {
         const tryLine = line ? `${line} ${word}` : word;
-        if (font.widthOfTextAtSize(tryLine, size) > width && line) {
+        if (this.width(tryLine, size, b) > maxW && line) {
           lines.push(line);
           line = word;
         } else line = tryLine;
@@ -64,170 +102,223 @@ class Writer {
     return lines;
   }
 
-  text(text: string, opts: { size?: number; bold?: boolean; x?: number; width?: number; color?: any; gap?: number } = {}) {
-    const size = opts.size || 9.5;
-    const font = opts.bold ? this.bold : this.font;
-    const x = opts.x ?? M;
-    const width = opts.width ?? A4.w - x - M;
-    for (const line of this.wrap(text, size, font, width)) {
-      this.page.drawText(line, { x, y: this.y - size, size, font, color: opts.color || INK });
-      this.y -= size * 1.35;
-    }
-    this.y -= opts.gap ?? 2;
+  hr(y: number, x1 = M, x2 = A4.w - M, color = LINE, thickness = 0.8) {
+    this.page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness, color });
   }
 
-  section(title: string) {
-    this.y -= 6;
-    this.page.drawRectangle({ x: M, y: this.y - 16, width: A4.w - 2 * M, height: 16, color: rgb(0.93, 0.91, 0.86) });
-    this.page.drawText(clean(title), { x: M + 6, y: this.y - 12, size: 10, font: this.bold, color: INK });
-    this.y -= 24;
+  bar(title: string, top: number): number {
+    const h = 20;
+    this.page.drawRectangle({ x: M, y: top - h, width: CW, height: h, color: BAR });
+    this.centered(title, A4.w / 2, top - 14, 10.5, true);
+    return top - h;
   }
 
-  check(label: string, checked: boolean, x = M) {
-    const size = 9.5;
-    this.page.drawRectangle({ x, y: this.y - 9.5, width: 8, height: 8, borderColor: INK, borderWidth: 0.8 });
-    if (checked) this.page.drawText("X", { x: x + 1.4, y: this.y - 8.6, size: 7.5, font: this.bold, color: INK });
-    const lines = this.wrap(label, size, this.font, A4.w - x - 14 - M);
-    for (const line of lines) {
-      this.page.drawText(line, { x: x + 14, y: this.y - size, size, font: this.font, color: INK });
-      this.y -= size * 1.35;
+  box(top: number, bottom: number) {
+    this.page.drawRectangle({ x: M, y: bottom, width: CW, height: top - bottom, borderColor: LINE, borderWidth: 1 });
+  }
+
+  // Case à cocher (coin haut-gauche à x, top) + libellé en gras.
+  check(label: string, x: number, top: number, checked: boolean) {
+    const s = 13;
+    this.page.drawRectangle({ x, y: top - s, width: s, height: s, borderColor: INK, borderWidth: 1 });
+    if (checked) {
+      // Coche dessinée (✓ absent des polices standard).
+      this.page.drawLine({ start: { x: x + 3, y: top - 7 }, end: { x: x + 5.5, y: top - 10.5 }, thickness: 1.4, color: INK });
+      this.page.drawLine({ start: { x: x + 5.5, y: top - 10.5 }, end: { x: x + 10.5, y: top - 2.5 }, thickness: 1.4, color: INK });
     }
-    this.y -= 2;
+    this.text(label, x + s + 4, top - 10.5, 9, true);
   }
 }
 
-export async function renderReceiptPdf(r: ReceiptDoc, signatureImage?: string): Promise<Buffer> {
+export async function renderReceiptPdf(r: ReceiptDoc, signatureImage?: string, logoImage?: string): Promise<Buffer> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Reçu fiscal ${r.number}`);
   pdf.setAuthor(clean(r.association.legalName));
   const page = pdf.addPage([A4.w, A4.h]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const w = new Writer(page, font, bold);
-  let annex: string[] = [];
-
-  // En-tête
-  w.text("Reçu au titre des dons à certains organismes d'intérêt général", { size: 13, bold: true, gap: 0 });
-  w.text("Article 200 du code général des impôts · selon le modèle Cerfa n° 11580*05", { size: 8.5, color: GREY });
-  w.text(`Numéro d'ordre du reçu : ${r.number}`, { size: 10.5, bold: true, gap: 4 });
-  if (r.cancelled) w.text("REÇU ANNULÉ", { size: 14, bold: true, color: rgb(0.75, 0.1, 0.1) });
-
-  // Bénéficiaire
+  const italicBold = await pdf.embedFont(StandardFonts.HelveticaBoldOblique);
+  const d = new Draw(page, font, bold);
   const a = r.association;
-  w.section("Bénéficiaire des versements");
-  w.text(`Nom ou dénomination : ${a.legalName}`);
-  w.text(`Adresse : ${a.address}, ${a.postalCode} ${a.city}`);
-  const ids = [a.rna && `RNA ${a.rna}`, a.siren && `SIREN ${a.siren}`].filter(Boolean).join(" · ");
-  if (ids) w.text(`Identification : ${ids}`);
-  w.text(`Objet : ${a.object}`, { gap: 6 });
-  w.text("Qualité de l'organisme :", { bold: true });
+
+  // ---- En-tête : bloc Cerfa | titre | n° d'ordre
+  let y = A4.h - 36;
+  d.hr(y);
+  const cerfaCx = M + 62;
+  d.centered("2041-RD", cerfaCx, y - 18, 8.5, true);
+  page.drawEllipse({ x: cerfaCx, y: y - 40, xScale: 38, yScale: 14, color: INK });
+  const cerfaW = italicBold.widthOfTextAtSize("cerfa", 17);
+  page.drawText("cerfa", { x: cerfaCx - cerfaW / 2, y: y - 45.5, size: 17, font: italicBold, color: rgb(1, 1, 1) });
+  d.centered("N° 11580*05", cerfaCx, y - 67, 8.5, true);
+
+  const title = "Reçu des dons et versements effectués par les particuliers au titre des articles 200 et 978 du code général des impôts";
+  d.wrap(title, 10.5, 210, true).forEach((l, i) => d.centered(l, A4.w / 2, y - 22 - i * 13, 10.5, true));
+
+  d.right("N° d'ordre du reçu", A4.w - M, y - 28, 9, true, GREY);
+  d.right(r.number, A4.w - M, y - 44, 12, true);
+  if (r.cancelled) d.right("REÇU ANNULÉ", A4.w - M, y - 62, 11, true, rgb(0.75, 0.1, 0.1));
+
+  y -= 80;
+  d.hr(y);
+
+  // ---- Logo + nom de l'association | adresse du donateur (fenêtre)
+  const logo = await embedDataUrl(pdf, logoImage);
+  const leftCx = M + CW * 0.27;
+  let logoBottom = y - 18;
+  if (logo) {
+    const scale = Math.min(70 / logo.width, 42 / logo.height, 1);
+    const lw = logo.width * scale;
+    const lh = logo.height * scale;
+    page.drawImage(logo, { x: leftCx - lw / 2, y: y - 10 - lh, width: lw, height: lh });
+    logoBottom = y - 10 - lh;
+  }
+  d.wrap(a.legalName.toUpperCase(), 10.5, CW * 0.5, true).forEach((l, i) => d.centered(l, leftCx, logoBottom - 16 - i * 13, 10.5, true));
+
+  const dx = M + CW * 0.56;
+  const donorLines = [r.donor.name.toUpperCase(), r.donor.address, `${r.donor.postalCode} ${r.donor.city.toUpperCase()}`];
+  donorLines.forEach((l, i) => d.text(l, dx, y - 24 - i * 16, 10.5, true));
+
+  y = Math.min(logoBottom - 16 - 13, y - 24 - 2 * 16) - 12;
+
+  // ---- Bénéficiaire
+  y = d.bar("BENEFICIAIRE DU DON", y) - 4;
+  const boxTop = y;
+  const labelX = M + 10;
+  const valueX = M + 176;
+  const valueW = A4.w - M - 10 - valueX;
+  y -= 20;
+  const row = (label: string, value: string, boldValue: boolean, size = 10.5) => {
+    const lines = d.wrap(value, size, valueW, boldValue);
+    d.text(label, labelX, y - (lines.length > 1 ? (lines.length - 1) * 6.5 : 0), 9, true);
+    lines.forEach((l, i) => d.text(l, valueX, y - i * 13, size, boldValue));
+    y -= 13 * lines.length + 3;
+  };
   const cat = ASSOCIATION_CATEGORIES.find((c) => c.key === a.category);
-  w.check(cat ? cat.label : a.category, true);
+  const ids = [a.siren && `SIREN ${a.siren}`, a.rna && `RNA ${a.rna}`].filter(Boolean).join(" · ");
+  row("NOM OU DENOMINATION :", a.legalName.toUpperCase(), true);
+  row("Numéro SIREN ou RNA :", ids, true);
+  row("ADRESSE ASSOCIATION :", `${a.address.toUpperCase()}, ${a.postalCode} ${a.city.toUpperCase()}`, true);
+  row("OBJET :", a.object, false, 9.5);
+  row("QUALITE DE L'ORGANISME :", cat ? cat.label : a.category, false, 9.5);
 
-  // Donateur
-  w.section("Donateur");
-  w.text(`Nom et prénom : ${r.donor.name}`);
-  w.text(`Adresse : ${r.donor.address}, ${r.donor.postalCode} ${r.donor.city}`);
+  y -= 2;
+  d.hr(y, M + 12, A4.w - M - 12);
+  y -= 16;
+  d.text("Le bénéficiaire reconnaît avoir reçu au titre des dons et versements ouvrant droit à réduction d'impôt, la somme de", labelX + 2, y, 9);
+  y -= 14;
 
-  // Montant
-  w.section("Versement");
-  w.text("Le bénéficiaire reconnaît avoir reçu au titre des dons et versements ouvrant droit à réduction d'impôt la somme de :");
-  w.text(`*** ${eur(r.amount)} ***`, { size: 13, bold: true, gap: 2 });
-  w.text(`Somme en toutes lettres : ${euroAmountToWords(r.amount)}`, { gap: 4 });
-  if (r.kind === "unitaire" && r.payments.length === 1) {
-    w.text(`Date du versement ou du don : ${frDate(r.payments[0].date)}`);
-  } else {
-    w.text(`Dons effectués du ${frDate(r.periodStart)} au ${frDate(r.periodEnd)} (reçu récapitulatif, ${r.payments.length} versement${r.payments.length > 1 ? "s" : ""}) :`);
-    // Détail des versements : jusqu'à 4 colonnes sur la page, au-delà
-    // de 64 versements le détail passe en annexe (page 2).
-    const items = r.payments.map((p) => `${frDate(p.date)} : ${eur(p.amount)}`);
-    if (items.length <= 64) {
-      const cols = Math.min(4, Math.max(1, Math.ceil(items.length / 12)));
-      const rows = Math.ceil(items.length / cols);
-      const colW = (A4.w - 2 * M - 12) / cols;
-      const startY = w.y;
-      let lowest = startY;
-      for (let c = 0; c < cols; c++) {
-        w.y = startY;
-        items.slice(c * rows, (c + 1) * rows).forEach((t) => w.text(t, { x: M + 12 + c * colW, size: 8.5, gap: 0 }));
-        lowest = Math.min(lowest, w.y);
-      }
-      w.y = lowest;
-    } else {
-      w.text("Détail des versements en annexe.", { x: M + 12, size: 8.5 });
-      annex = items;
-    }
-    w.y -= 4;
-  }
+  const amountText = `***${eurShort(r.amount)} Euros*** ${euroAmountToWords(r.amount)}`;
+  const amountLines = d.wrap(amountText, 12.5, CW - 80, true);
+  const amW = Math.max(...amountLines.map((l) => d.width(l, 12.5, true))) + 24;
+  const amH = amountLines.length * 16 + 12;
+  page.drawRectangle({ x: A4.w / 2 - amW / 2, y: y - amH, width: amW, height: amH, borderColor: LINE, borderWidth: 1 });
+  amountLines.forEach((l, i) => d.centered(l, A4.w / 2, y - 18 - i * 16, 12.5, true));
+  y -= amH + 8;
 
-  w.text(
-    "Le bénéficiaire certifie sur l'honneur que les dons et versements qu'il reçoit ouvrent droit à la réduction d'impôt prévue à l'article 200 du CGI.",
-    { bold: true, gap: 6 }
+  const period =
+    r.payments.length === 1
+      ? `Date du versement : ${frDate(r.payments[0].date)}`
+      : `Dons effectués du ${frDate(r.periodStart)} au ${frDate(r.periodEnd)} (${r.payments.length} versements, détail en annexe)`;
+  d.centered(period, A4.w / 2, y - 4, 8.5, false, GREY);
+  y -= 14;
+  d.box(boxTop, y);
+
+  // ---- Donateur
+  y = d.bar("DONATEUR", y - 10) - 4;
+  const box2Top = y;
+  y -= 20;
+  row("NOM OU DENOMINATION :", r.donor.name.toUpperCase(), false);
+  row("ADRESSE DONATEUR :", `${r.donor.address}, ${r.donor.postalCode} ${r.donor.city.toUpperCase()}`, false);
+  y -= 4;
+  d.box(box2Top, y);
+
+  // ---- Certification et cases
+  y -= 18;
+  ["Le bénéficiaire certifie sur l'honneur que les dons et versements qu'il reçoit", "ouvrent droit à la réduction d'impôt prévue à l'article"].forEach((l, i) =>
+    d.centered(l, A4.w / 2, y - i * 13, 10, true)
   );
+  y -= 26;
+  const c1 = M + 4;
+  const c2 = M + CW * 0.32;
+  const c3 = M + CW * 0.6;
+  d.check("200 du CGI", c1, y, true);
+  d.check("238 bis du CGI", c2, y, false);
+  d.check("978 du CGI", c3, y, false);
 
-  // Forme, nature, mode
-  const colY = w.y;
-  w.text("Forme du don :", { bold: true });
-  w.check("Acte authentique", false);
-  w.check("Acte sous seing privé", false);
-  w.check("Déclaration de don manuel", true);
-  w.check("Autres", false);
-  const afterForm = w.y;
+  const underline = (t: string, x: number, yy: number) => {
+    d.text(t, x, yy, 9, true);
+    d.hr(yy - 2, x, x + d.width(t, 9, true), INK, 0.6);
+  };
+  y -= 32;
+  underline("Forme du don", M, y);
+  y -= 16;
+  d.check("Acte authentique", c1, y, false);
+  d.check("Acte sous seing privé", c2, y, false);
+  d.check("Déclaration de don manuel", c3, y, true);
+  d.check("Autres", c3 + 13 + 4 + d.width("Déclaration de don manuel", 9, true) + 14, y, false);
 
-  w.y = colY;
-  const x2 = M + 180;
-  w.text("Nature du don :", { bold: true, x: x2 });
-  w.check("Numéraire", true, x2);
-  w.check("Titres de sociétés cotés", false, x2);
-  w.check("Autres", false, x2);
-  const afterNature = w.y;
+  y -= 32;
+  underline("Nature du don", M, y);
+  y -= 16;
+  d.check("Numéraire", c1, y, true);
+  d.check("Titres de sociétés cotées", c2, y, false);
+  d.check("Autres", c3, y, false);
 
-  w.y = colY;
-  const x3 = M + 340;
-  const groups = new Set(r.payments.map((p) => METHOD_GROUP[p.method]));
-  w.text("Mode de versement :", { bold: true, x: x3 });
-  w.check("Remise d'espèces", groups.has("especes"), x3);
-  w.check("Chèque", groups.has("cheque"), x3);
-  w.check("Virement, prélèvement, carte bancaire", groups.has("virement_cb"), x3);
-  w.y = Math.min(afterForm, afterNature, w.y) - 10;
+  y -= 22;
+  d.hr(y);
 
-  // Date et signature
-  w.text(`Fait à ${a.city}, le ${frDate(r.issuedAt)}`);
-  w.text(`${a.signatoryName}, ${a.signatoryTitle}`, { bold: true, gap: 4 });
+  // ---- Mode de versement | Date et signature
+  y -= 18;
+  const modes = Array.from(new Set(r.payments.map((p) => METHOD_TEXT[p.method] || p.method))).join(", ");
+  d.text("Mode de versement : ", M, y, 10.5);
+  const modeX = M + d.width("Mode de versement : ", 10.5);
+  d.wrap(modes, 10.5, CW * 0.55 - (modeX - M), true).forEach((l, i) => d.text(l, modeX, y - i * 13, 10.5, true));
 
-  const sig = signatureImage?.match(/^data:image\/(png|jpe?g);base64,(.+)$/);
-  if (sig) {
-    try {
-      const bytes = Buffer.from(sig[2], "base64");
-      const img = sig[1] === "png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
-      const scale = Math.min(160 / img.width, 60 / img.height, 1);
-      page.drawImage(img, { x: M, y: w.y - img.height * scale, width: img.width * scale, height: img.height * scale });
-      w.y -= img.height * scale + 6;
-    } catch (e) {
-      console.warn("[receiptPdf] signature illisible:", e);
-    }
+  const sigCx = A4.w - M - 80;
+  d.centered("Date et signature", sigCx, y, 9.5, true);
+  d.centered(longDate(r.issuedAt), sigCx, y - 16, 10.5, true);
+  const role = a.signatoryTitle ? (a.signatoryTitle.match(/^(le|la|l')\s/i) ? a.signatoryTitle : `Le ${a.signatoryTitle}`) : "";
+  if (role) {
+    d.centered(role, sigCx, y - 36, 9.5, true);
+    const rw = d.width(role, 9.5, true);
+    d.hr(y - 38, sigCx - rw / 2, sigCx + rw / 2, INK, 0.6);
   }
+  let sy = y - 44;
+  const sig = await embedDataUrl(pdf, signatureImage);
+  if (sig) {
+    const scale = Math.min(130 / sig.width, 55 / sig.height, 1);
+    const sw = sig.width * scale;
+    const sh = sig.height * scale;
+    page.drawImage(sig, { x: sigCx - sw / 2, y: sy - sh, width: sw, height: sh });
+    sy -= sh + 4;
+  } else {
+    sy -= 30;
+  }
+  d.centered(a.signatoryName, sigCx, sy - 10, 9.5, true);
 
-  page.drawText(clean("Conservez ce reçu : il justifie la réduction d'impôt sur le revenu (66 % du montant, dans la limite de 20 % du revenu imposable)."), {
-    x: M,
-    y: M - 10,
-    size: 7.5,
-    font,
-    color: GREY,
-  });
-
-  if (annex.length) {
+  // ---- Annexe : détail des versements d'un reçu récapitulatif
+  if (r.payments.length > 1) {
     const p2 = pdf.addPage([A4.w, A4.h]);
-    const w2 = new Writer(p2, font, bold);
-    w2.text(`Annexe au reçu n° ${r.number} : détail des versements`, { size: 11, bold: true, gap: 6 });
-    const cols = 4;
-    const rows = Math.ceil(annex.length / cols);
-    const colW = (A4.w - 2 * M) / cols;
-    const startY = w2.y;
-    for (let c = 0; c < cols; c++) {
-      w2.y = startY;
-      annex.slice(c * rows, (c + 1) * rows).forEach((t) => w2.text(t, { x: M + c * colW, size: 8, gap: 0 }));
-    }
+    const d2 = new Draw(p2, font, bold);
+    let yy = A4.h - 50;
+    d2.text(`Annexe au reçu n° ${r.number} : détail des versements`, M, yy, 12, true);
+    yy -= 16;
+    d2.text(`${r.donor.name} · du ${frDate(r.periodStart)} au ${frDate(r.periodEnd)}`, M, yy, 9.5, false, GREY);
+    yy -= 22;
+    const cols = r.payments.length > 50 ? 3 : r.payments.length > 25 ? 2 : 1;
+    const perCol = Math.ceil(r.payments.length / cols);
+    const colW = CW / cols;
+    r.payments.forEach((p, i) => {
+      const c = Math.floor(i / perCol);
+      const rowY = yy - (i % perCol) * 13;
+      const x = M + c * colW;
+      d2.text(frDate(p.date), x, rowY, 9);
+      d2.text(METHOD_TEXT[p.method] || p.method, x + 62, rowY, 9, false, GREY);
+      d2.right(`${eurShort(p.amount)} €`, x + colW - 14, rowY, 9, true);
+    });
+    const lastY = yy - (perCol - 1) * 13 - 18;
+    d2.hr(lastY + 8);
+    d2.right(`Total : ${eurShort(r.amount)} €`, A4.w - M, lastY - 6, 10.5, true);
   }
 
   return Buffer.from(await pdf.save());

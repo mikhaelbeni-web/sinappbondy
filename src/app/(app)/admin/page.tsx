@@ -363,14 +363,14 @@ function AssociationTab() {
       });
   }, []);
 
-  function onSignature(file: File | undefined) {
+  function onImage(key: "signatureImage" | "logoImage", file: File | undefined) {
     if (!file) return;
     if (file.size > 300_000) {
-      setError("Signature trop lourde (300 Ko maximum).");
+      setError("Image trop lourde (300 Ko maximum).");
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setForm((f: any) => ({ ...f, signatureImage: String(reader.result) }));
+    reader.onload = () => setForm((f: any) => ({ ...f, [key]: String(reader.result) }));
     reader.readAsDataURL(file);
   }
 
@@ -439,21 +439,28 @@ function AssociationTab() {
             Association loi 1901 : en général « œuvre d'intérêt général ». Association cultuelle loi 1905 : « association cultuelle ». En cas de doute, demandez au comptable.
           </p>
         </div>
-        <div className="sm:col-span-2">
-          <label className="label">Signature (image PNG ou JPEG, facultative)</label>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <input type="file" accept="image/png,image/jpeg" onChange={(e) => onSignature(e.target.files?.[0])} className="text-sm" />
-            {form.signatureImage && (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={form.signatureImage} alt="Signature" className="h-12 border rounded bg-white" />
-                <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => setForm({ ...form, signatureImage: "" })}>
-                  Retirer
-                </button>
-              </>
-            )}
+        {(
+          [
+            ["logoImage", "Logo de l'association (PNG ou JPEG, facultatif)"],
+            ["signatureImage", "Signature du signataire (PNG ou JPEG sur fond blanc, facultative)"],
+          ] as const
+        ).map(([key, label]) => (
+          <div key={key} className="sm:col-span-2">
+            <label className="label">{label}</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <input type="file" accept="image/png,image/jpeg" onChange={(e) => onImage(key, e.target.files?.[0])} className="text-sm" />
+              {form[key] && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form[key]} alt={label} className="h-12 border rounded bg-white" />
+                  <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => setForm({ ...form, [key]: "" })}>
+                    Retirer
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        ))}
         <label className="sm:col-span-2 flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-1" checked={!!form.autoReceipt} onChange={(e) => setForm({ ...form, autoReceipt: e.target.checked })} />
           <span>Envoyer automatiquement un reçu fiscal à chaque paiement. Décochez pour n'émettre qu'un reçu récapitulatif annuel.</span>

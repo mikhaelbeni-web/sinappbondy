@@ -15,11 +15,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const snap = await adminDb().collection("receipts").doc(params.id).get();
     const receipt = snap.data() as ReceiptDoc | undefined;
     if (!receipt || receipt.donorId !== donorId || receipt.cancelled) return jsonError("Reçu introuvable.", 404);
-    const pdf = await renderReceiptPdf(receipt, (await getAssociation()).signatureImage);
+    const association = await getAssociation();
+    const pdf = await renderReceiptPdf(receipt, association.signatureImage, association.logoImage);
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="recu-fiscal-${receipt.number}.pdf"`,
+        "Content-Disposition": `inline; filename="recu-fiscal-${receipt.number.replace("/", "-")}.pdf"`,
       },
     });
   } catch (err) {

@@ -23,6 +23,7 @@ export interface AssociationSettings {
   signatoryName: string;
   signatoryTitle: string; // ex : Président
   signatureImage: string; // data URL PNG/JPEG (facultatif)
+  logoImage: string; // logo affiché sur le reçu, data URL PNG/JPEG (facultatif)
   autoReceipt: boolean; // reçu envoyé automatiquement à chaque paiement
   updatedAt: string;
 }
@@ -39,6 +40,7 @@ export const EMPTY_ASSOCIATION: AssociationSettings = {
   signatoryName: "",
   signatoryTitle: "",
   signatureImage: "",
+  logoImage: "",
   autoReceipt: true,
   updatedAt: "",
 };

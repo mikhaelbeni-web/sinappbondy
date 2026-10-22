@@ -14,11 +14,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     if (!snap.exists) return jsonError("Reçu introuvable.", 404);
     const receipt = snap.data() as ReceiptDoc;
     const association = await getAssociation();
-    const pdf = await renderReceiptPdf(receipt, association.signatureImage);
+    const pdf = await renderReceiptPdf(receipt, association.signatureImage, association.logoImage);
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="recu-fiscal-${receipt.number}.pdf"`,
+        "Content-Disposition": `inline; filename="recu-fiscal-${receipt.number.replace("/", "-")}.pdf"`,
       },
     });
   } catch (err) {
