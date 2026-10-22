@@ -19,7 +19,7 @@ const NAV = [
   { href: "/messages", label: "Messages", perm: "envoyer_messages" as const },
   { href: "/services", label: "Offices", perm: null },
   { href: "/hazkarot", label: "Hazkarot", perm: null },
-  { href: "/mikve", label: "Mikvé", perm: "gerer_offices" as const },
+  { href: "/mikve-reservations", label: "Mikvé", perm: "gerer_offices" as const },
   { href: "/catalog", label: "Catalogue", perm: "gerer_catalogue" as const },
   { href: "/admin", label: "Administration", perm: null, any: ["gerer_equipe", "gerer_postes", "gerer_paiements", "envoyer_relances"] as const },
 ];
