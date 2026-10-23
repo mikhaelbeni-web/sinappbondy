@@ -6,7 +6,8 @@ import { sendReminderEmail } from "@/lib/email";
 import { payUrl } from "@/lib/payments";
 import { remainingOf } from "@/lib/format";
 
-// Relance en une fois toutes les promesses "en attente" ou "partiel" (visibles par
+// Relance en une fois toutes les promesses restant dues (en attente, déjà relancées
+// ou partielles), visibles par
 // l'utilisateur) qui ont un e-mail de fidèle renseigné.
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const pledgeIds: string[] | undefined = body?.pledgeIds;
 
-    let query: FirebaseFirestore.Query = adminDb().collection("pledges").where("status", "in", ["en_attente", "partiel"]);
+    let query: FirebaseFirestore.Query = adminDb().collection("pledges").where("status", "in", ["en_attente", "relance_envoyee", "partiel"]);
     if (!hasPermission(user.role, "voir_tout")) {
       query = query.where("createdBy", "==", user.uid);
     }

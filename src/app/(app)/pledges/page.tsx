@@ -46,6 +46,8 @@ function PledgesPageInner() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
+  // Retour des relances, affiché au-dessus de la liste (le formulaire est hors écran).
+  const [remindNotice, setRemindNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
 
   async function loadAll() {
@@ -132,15 +134,17 @@ function PledgesPageInner() {
     }
   }
 
-  async function relancer(pledgeId: string) {
+  async function relancer(pledgeId: string, donorName: string) {
     setRemindingId(pledgeId);
+    setRemindNotice(null);
     try {
       const res = await fetch(`/api/pledges/${pledgeId}/remind`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+      setRemindNotice({ ok: true, text: `Relance envoyée à ${donorName}.` });
       await loadAll();
     } catch (err: any) {
-      setError(err.message);
+      setRemindNotice({ ok: false, text: `Relance de ${donorName} : ${err.message}` });
     } finally {
       setRemindingId(null);
     }
@@ -287,6 +291,10 @@ function PledgesPageInner() {
         </select>
       </div>
 
+      {remindNotice && (
+        <p className={`text-sm break-words ${remindNotice.ok ? "text-green-700" : "text-red-600"}`}>{remindNotice.text}</p>
+      )}
+
       <div className="card divide-y">
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
         {!loading && visiblePledges.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune promesse.</p>}
@@ -303,7 +311,7 @@ function PledgesPageInner() {
               <span className="font-semibold">{formatEUR(p.amount)}</span>
               <StatusBadge status={p.status} />
               {can("envoyer_relances") && remainingOf(p) > 0 && (
-                <button onClick={() => relancer(p.id)} disabled={remindingId === p.id} className="btn-secondary text-xs px-2 py-1">
+                <button onClick={() => relancer(p.id, p.donorName)} disabled={remindingId === p.id} className="btn-secondary text-xs px-2 py-1">
                   {remindingId === p.id ? "Envoi…" : "Relancer"}
                 </button>
               )}
