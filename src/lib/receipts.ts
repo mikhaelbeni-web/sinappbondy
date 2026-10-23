@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { adminDb } from "./firebaseAdmin";
 import { missingAssociationFields, type AssociationSettings } from "./association";
 import { getAssociation } from "./associationServer";
@@ -37,6 +38,7 @@ export async function issueReceipt(params: {
 
   const db = adminDb();
   const receiptRef = db.collection("receipts").doc();
+  const signatureId = await archiveSignature(association.signatureImage);
 
   return db.runTransaction(async (tx) => {
     const donorSnap = await tx.get(db.collection("donors").doc(params.donorId));
@@ -97,6 +99,7 @@ export async function issueReceipt(params: {
         signatoryName: association.signatoryName,
         signatoryTitle: association.signatoryTitle,
       },
+      signatureId,
       issuedAt: now,
       issuedBy: params.issuedBy,
       emailedAt: null,
@@ -129,10 +132,40 @@ export async function cancelReceipt(receiptId: string): Promise<void> {
   });
 }
 
+// La signature d'un reçu est figée à son émission : chaque image de
+// signature est archivée une fois, sous son empreinte, et le reçu la
+// référence. Le logo, sans portée fiscale, est toujours celui de la fiche.
+async function archiveSignature(image: string): Promise<string | null> {
+  if (!image) return null;
+  const id = createHash("sha256").update(image).digest("hex").slice(0, 32);
+  const ref = adminDb().collection("receiptSignatures").doc(id);
+  if (!(await ref.get()).exists) await ref.set({ image, createdAt: new Date().toISOString() });
+  return id;
+}
+
+// Images à apposer sur le PDF d'un reçu. Sans signature archivée (reçu émis
+// sans signature, ou avant l'archivage), la signature actuelle n'est reprise
+// que si le signataire du reçu est toujours celui de la fiche.
+export async function receiptImages(receipt: ReceiptDoc, association?: AssociationSettings): Promise<{ signatureImage: string; logoImage: string }> {
+  const a = association || (await getAssociation());
+  let signatureImage = "";
+  if (receipt.signatureId) {
+    const snap = await adminDb().collection("receiptSignatures").doc(receipt.signatureId).get();
+    signatureImage = snap.exists ? (snap.data() as any).image || "" : "";
+  } else if (receipt.association.signatoryName.trim().toLowerCase() === a.signatoryName.trim().toLowerCase()) {
+    signatureImage = a.signatureImage;
+  }
+  return { signatureImage, logoImage: a.logoImage };
+}
+
+export async function receiptPdf(receipt: ReceiptDoc, association?: AssociationSettings): Promise<Buffer> {
+  const { signatureImage, logoImage } = await receiptImages(receipt, association);
+  return renderReceiptPdf(receipt, signatureImage, logoImage);
+}
+
 export async function emailReceipt(receipt: ReceiptDoc, association?: AssociationSettings): Promise<{ sent: boolean; reason?: string }> {
   if (!receipt.donor.email) return { sent: false, reason: "pas d'e-mail" };
-  const a = association || (await getAssociation());
-  const pdf = await renderReceiptPdf(receipt, a.signatureImage, a.logoImage);
+  const pdf = await receiptPdf(receipt, association);
   const result = await sendReceiptEmail({
     to: receipt.donor.email,
     donorName: receipt.donor.name,
