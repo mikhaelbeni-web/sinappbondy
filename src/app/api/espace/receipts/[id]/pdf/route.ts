@@ -4,6 +4,7 @@ import { handleApiError, jsonError } from "@/lib/apiHelpers";
 import { getAssociation } from "@/lib/associationServer";
 import { requireDonorId } from "@/lib/donorSession";
 import { renderReceiptPdf } from "@/lib/receiptPdf";
+import { markReceiptDelivered } from "@/lib/receipts";
 import type { ReceiptDoc } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -17,6 +18,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     if (!receipt || receipt.donorId !== donorId || receipt.cancelled) return jsonError("Reçu introuvable.", 404);
     const association = await getAssociation();
     const pdf = await renderReceiptPdf(receipt, association.signatureImage, association.logoImage);
+    // Téléchargé par le fidèle : le reçu est remis, il ne sera plus modifiable.
+    if (!receipt.emailedAt && !receipt.deliveredAt) {
+      await markReceiptDelivered(receipt.id, "espace", { uid: `donor:${donorId}`, name: receipt.donor.name }).catch((e) =>
+        console.warn("[receipts] remise espace non enregistrée:", e)
+      );
+    }
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",

@@ -19,6 +19,17 @@ export async function withPermission(perm?: PermissionKey): Promise<SessionUser>
   return user;
 }
 
+// Réservé au poste Administrateur (tous accès), vérifié côté serveur.
+export async function withAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!user.role?.isAdmin) {
+    const err: any = new Error("Action réservée au poste Administrateur.");
+    err.status = 403;
+    throw err;
+  }
+  return user;
+}
+
 export function handleApiError(err: any) {
   const status = err?.status || 500;
   const message = err?.message || "Erreur serveur";
