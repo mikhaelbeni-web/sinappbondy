@@ -1,4 +1,4 @@
-// Page de retour après paiement Stripe (ou lien de paiement inutilisable).
+// Page de retour après paiement HelloAsso (ou lien de paiement inutilisable).
 export default function MerciPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   let title = "Toda raba !";
   let text = "Votre don a bien été enregistré. Merci infiniment pour votre générosité envers la synagogue.";
@@ -12,6 +12,9 @@ export default function MerciPage({ searchParams }: { searchParams: Record<strin
   } else if (searchParams.annule) {
     title = "Paiement interrompu";
     text = "Le paiement n'a pas été effectué. Vous pouvez réessayer à tout moment avec le même lien.";
+  } else if (searchParams.erreur === "refus") {
+    title = "Paiement refusé";
+    text = "Le paiement n'a pas abouti. Vous pouvez réessayer avec le même lien ou contacter la synagogue.";
   } else if (searchParams.erreur === "lien") {
     title = "Lien invalide";
     text = "Ce lien de paiement n'est pas valide. Merci de contacter la synagogue.";

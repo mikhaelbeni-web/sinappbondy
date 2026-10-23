@@ -78,15 +78,13 @@ export async function POST(req: NextRequest) {
       createdByName: user.name,
       createdAt: now,
       updatedAt: now,
-      stripePaymentLinkUrl: null,
-      stripePaymentLinkId: null,
-      stripeCheckoutSessionId: null,
+      onlineCheckoutId: null,
       remindersSentCount: 0,
       lastReminderAt: null,
       paidAt: null,
     };
 
-    // Plus de Payment Link Stripe à montant fixe : les relances envoient un
+    // Pas de lien à montant fixe : les relances envoient un
     // lien signé (/api/pay) qui calcule le reste dû au moment du clic.
     await ref.set(doc);
     return NextResponse.json({ pledge: doc });

@@ -1,32 +1,34 @@
 import { NextResponse } from "next/server";
 import { withPermission, handleApiError } from "@/lib/apiHelpers";
-import { getStripe } from "@/lib/stripe";
+import { getHelloAssoOrganization, isHelloAssoSandbox } from "@/lib/helloasso";
 
-// État de la configuration Stripe, pour l'écran Admin > Paiements.
+// État de la configuration HelloAsso, pour l'écran Admin > Paiements.
 export async function GET() {
   try {
     await withPermission("gerer_paiements");
 
-    const hasSecretKey = !!process.env.STRIPE_SECRET_KEY;
-    const hasWebhookSecret = !!process.env.STRIPE_WEBHOOK_SECRET;
-    let accountEmail: string | null = null;
+    const hasClientId = !!process.env.HELLOASSO_CLIENT_ID;
+    const hasClientSecret = !!process.env.HELLOASSO_CLIENT_SECRET;
+    const organizationSlug = process.env.HELLOASSO_ORGANIZATION_SLUG || null;
+    let organizationName: string | null = null;
     let error: string | null = null;
 
-    if (hasSecretKey) {
+    if (hasClientId && hasClientSecret && organizationSlug) {
       try {
-        const account = await getStripe().accounts.retrieve();
-        accountEmail = account.email || null;
+        organizationName = (await getHelloAssoOrganization()).name;
       } catch (e: any) {
-        error = e?.message || "Impossible de contacter Stripe.";
+        error = e?.message || "Impossible de contacter HelloAsso.";
       }
     }
 
     return NextResponse.json({
-      hasSecretKey,
-      hasWebhookSecret,
-      accountEmail,
+      hasClientId,
+      hasClientSecret,
+      organizationSlug,
+      organizationName,
+      sandbox: isHelloAssoSandbox(),
       error,
-      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/stripe/webhook`,
+      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/helloasso/webhook`,
     });
   } catch (err) {
     return handleApiError(err);

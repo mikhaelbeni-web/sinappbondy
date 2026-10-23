@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const update: any = { updatedAt: new Date().toISOString() };
     if (typeof notes === "string") update.notes = notes;
     if (typeof status === "string" && ["en_attente", "annule"].includes(status)) {
-      // Le passage à "payé" ne se fait que via le webhook Stripe.
+      // Le passage à "payé" ne se fait que via les paiements.
       update.status = status;
     }
 

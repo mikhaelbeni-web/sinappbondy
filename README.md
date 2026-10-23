@@ -1,6 +1,6 @@
 # Gestion des dons - Synagogue
 
-Application de suivi des promesses de dons faites par les fidèles pendant les offices (Shabbat, fêtes), avec relance automatique par e-mail et paiement en ligne via Stripe.
+Application de suivi des promesses de dons faites par les fidèles pendant les offices (Shabbat, fêtes), avec relance automatique par e-mail et paiement en ligne via HelloAsso.
 
 ## Fonctionnalités
 
@@ -10,14 +10,14 @@ Application de suivi des promesses de dons faites par les fidèles pendant les o
 - **Catalogue des honneurs** : liste préremplie (ouverture du Heikal, montées 1 à 7, Maftir, Hagbah, Guelila, Hatan Torah, etc.), modifiable.
 - **Offices** : création d'un Shabbat/fête, avec le récapitulatif des promesses saisies dessus.
 - **Saisie des promesses** : formulaire rapide pour enchaîner la saisie de plusieurs convives à la fin d'un office.
-- **Relances Stripe** : chaque promesse génère un lien de paiement Stripe stable ; un e-mail de relance (via Resend) l'envoie au fidèle, individuellement ou en masse depuis le tableau de bord.
-- **Paiement automatique** : un webhook Stripe marque la promesse comme payée dès le règlement.
+- **Relances** : chaque e-mail de relance (via Resend) contient un lien de paiement signé ; le reste dû est recalculé au clic et le fidèle paie sur HelloAsso.
+- **Paiement automatique** : la notification HelloAsso (revérifiée auprès de l'API HelloAsso) enregistre le paiement et émet le reçu fiscal.
 
 ## Mise en route
 
 1. `cp .env.example .env.local` et renseignez :
    - un projet **Firebase** (Auth e-mail/mot de passe + Firestore, clé de service pour `firebase-admin`)
-   - une clé secrète **Stripe** + le secret de webhook (à créer après déploiement, en pointant vers `/api/stripe/webhook`, événement `checkout.session.completed`)
+   - un client API **HelloAsso** (`HELLOASSO_CLIENT_ID`, `HELLOASSO_CLIENT_SECRET`, `HELLOASSO_ORGANIZATION_SLUG`) et l'URL de notification `/api/helloasso/webhook` déclarée dans HelloAsso > Mon compte > Intégrations et API
    - une clé **Resend** pour l'envoi des e-mails de relance
 2. `npm install`
 3. `npm run dev`
@@ -25,10 +25,10 @@ Application de suivi des promesses de dons faites par les fidèles pendant les o
 
 ## Déploiement
 
-Compatible Vercel (Next.js 14, App Router). Pensez à configurer les variables d'environnement sur la plateforme et à créer le webhook Stripe une fois l'URL de production connue.
+Compatible Vercel (Next.js 14, App Router). Pensez à configurer les variables d'environnement sur la plateforme et à déclarer l'URL de notification HelloAsso une fois l'URL de production connue.
 
 ## Notes techniques
 
-- Stack : Next.js 14 (App Router) + Firebase (Auth + Firestore) + Stripe + Resend, comme vos autres outils internes.
-- Aucune donnée de carte bancaire ne transite par l'application : le paiement se fait entièrement sur les pages hébergées par Stripe.
+- Stack : Next.js 14 (App Router) + Firebase (Auth + Firestore) + HelloAsso + Resend, comme vos autres outils internes.
+- Aucune donnée de carte bancaire ne transite par l'application : le paiement se fait entièrement sur les pages hébergées par HelloAsso.
 - Idée d'évolution mentionnée : plan 3D de la synagogue pour visualiser les places/honneurs — non inclus dans cette première version, à ajouter ensuite si utile.

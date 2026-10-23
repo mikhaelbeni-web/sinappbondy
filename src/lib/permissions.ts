@@ -48,7 +48,7 @@ export const PERMISSIONS: { key: PermissionKey; label: string; description: stri
   {
     key: "envoyer_relances",
     label: "Envoyer les relances",
-    description: "Relancer un fidèle par e-mail avec un lien de paiement Stripe.",
+    description: "Relancer un fidèle par e-mail avec un lien de paiement en ligne.",
   },
   {
     key: "voir_tout",
@@ -58,7 +58,7 @@ export const PERMISSIONS: { key: PermissionKey; label: string; description: stri
   {
     key: "gerer_paiements",
     label: "Gérer les paiements",
-    description: "Voir la configuration Stripe et l'état des paiements de l'ensemble de la synagogue.",
+    description: "Voir la configuration HelloAsso et l'état des paiements de l'ensemble de la synagogue.",
   },
   {
     key: "envoyer_messages",

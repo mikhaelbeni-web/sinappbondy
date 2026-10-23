@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCampaignBySlug } from "@/lib/campaigns";
-import { createCheckoutSession } from "@/lib/stripeHelpers";
+import { createCheckout } from "@/lib/helloasso";
 
-// Don en ligne depuis la page publique : crée la session Stripe. Le fidèle
+// Don en ligne depuis la page publique : crée le paiement HelloAsso. Le fidèle
 // est rattaché (ou créé) par le webhook une fois le paiement confirmé.
 export async function POST(req: NextRequest) {
   try {
@@ -25,10 +25,13 @@ export async function POST(req: NextRequest) {
     }
 
     const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "Synagogue";
-    const url = await createCheckoutSession({
+    const url = await createCheckout({
       amount,
       label: campaign ? `Don - ${campaign.title}` : `Don - ${synagogueName}`,
       email,
+      firstName,
+      lastName,
+      containsDonation: true,
       metadata: {
         kind: "don",
         campaignId: campaign?.id || "",

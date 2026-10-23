@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findOrCreateDonor } from "@/lib/donors";
 import { createRegistration, getEventBySlug, seatsTaken, ticketUrl } from "@/lib/events";
-import { createCheckoutSession } from "@/lib/stripeHelpers";
+import { createCheckout } from "@/lib/helloasso";
 
-// Inscription publique : gratuite → billet immédiat ; payante → Stripe,
+// Inscription publique : gratuite → billet immédiat ; payante → HelloAsso,
 // le billet part à la confirmation du paiement (webhook).
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
   try {
@@ -28,10 +28,13 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       return NextResponse.json({ ticketUrl: ticketUrl(reg.code) });
     }
 
-    const url = await createCheckoutSession({
+    const url = await createCheckout({
       amount: event.price * qty,
       label: `${event.title} - ${qty} place${qty > 1 ? "s" : ""}`,
       email,
+      firstName,
+      lastName,
+      containsDonation: false,
       metadata: { kind: "billet", eventId: event.id, qty: String(qty), firstName, lastName, email },
     });
     return NextResponse.json({ url });

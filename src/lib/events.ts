@@ -55,7 +55,7 @@ export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
 }
 
 // Crée l'inscription et envoie le billet. `id` rend l'opération idempotente
-// (webhook Stripe rejoué : id = session Checkout).
+// (webhook HelloAsso rejoué : id = checkout).
 export async function createRegistration(params: {
   id?: string;
   event: EventDoc;

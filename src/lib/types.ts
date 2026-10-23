@@ -80,9 +80,7 @@ export interface PledgeDoc {
   createdByName: string;
   createdAt: string;
   updatedAt: string;
-  stripePaymentLinkUrl: string | null;
-  stripePaymentLinkId: string | null;
-  stripeCheckoutSessionId: string | null;
+  onlineCheckoutId: string | null;
   remindersSentCount: number;
   lastReminderAt: string | null;
   paidAt: string | null;
@@ -111,7 +109,7 @@ export interface PaymentDoc {
   // Part sans droit à reçu fiscal (contrepartie : billet, place des fêtes).
   nonDeductible?: number;
   depositId?: string | null; // remise en banque (chèques, espèces)
-  stripeCheckoutSessionId: string | null;
+  onlineCheckoutId: string | null;
   receiptId?: string | null; // reçu fiscal qui couvre ce paiement
   createdBy: string;
   createdByName: string;
