@@ -1,23 +1,76 @@
 import { Resend } from "resend";
-
-function getResend(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  return new Resend(key);
-}
+import nodemailer from "nodemailer";
 
 type Delivery = { sent: true } | { sent: false; reason: string };
+type Mail = {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: { filename: string; content: Buffer }[];
+};
+type Mailer = {
+  from: string;
+  send: (mail: Mail) => Promise<Delivery>;
+  // Envoi groupé natif (Resend) ; à défaut, un envoi par message.
+  batch?: (mails: Mail[]) => Promise<boolean>;
+};
 
-// Resend renvoie ses refus (domaine non vérifié, adresse invalide…) dans
-// `error` sans lever d'exception : on les remonte pour ne pas afficher
-// « envoyé » à tort.
-async function deliver(resend: Resend, payload: Parameters<Resend["emails"]["send"]>[0]): Promise<Delivery> {
-  const { error } = await resend.emails.send(payload);
-  if (error) {
-    console.error("[email] envoi refusé par Resend:", { to: payload.to, error });
-    return { sent: false, reason: error.message || "refus de Resend" };
+const NO_MAILER = "envoi d'e-mails non configuré (GMAIL_USER ou RESEND_API_KEY)";
+
+// Connexion SMTP réutilisée d'un envoi à l'autre (relances groupées).
+let gmailTransport: nodemailer.Transporter | null = null;
+
+// Deux services possibles : Gmail (SMTP, sans nom de domaine, environ
+// 500 e-mails par jour) s'il est configuré, sinon Resend.
+function getMailer(): Mailer | null {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPassword = process.env.GMAIL_APP_PASSWORD;
+  if (gmailUser && gmailPassword) {
+    gmailTransport ??= nodemailer.createTransport({
+      service: "gmail",
+      pool: true,
+      auth: { user: gmailUser, pass: gmailPassword.replace(/\s+/g, "") },
+    });
+    const transport = gmailTransport;
+    const name = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "Synagogue";
+    return {
+      // Gmail impose l'adresse du compte comme expéditeur.
+      from: `"${name.replace(/"/g, "")}" <${gmailUser}>`,
+      async send(mail) {
+        try {
+          await transport.sendMail(mail);
+          return { sent: true };
+        } catch (e: any) {
+          console.error("[email] envoi refusé par Gmail:", { to: mail.to, error: e?.message });
+          return { sent: false, reason: e?.message || "refus de Gmail" };
+        }
+      },
+    };
   }
-  return { sent: true };
+
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  const resend = new Resend(key);
+  return {
+    from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+    // Resend renvoie ses refus (domaine non vérifié, adresse invalide…) dans
+    // `error` sans lever d'exception : on les remonte pour ne pas afficher
+    // « envoyé » à tort.
+    async send(mail) {
+      const { error } = await resend.emails.send(mail);
+      if (error) {
+        console.error("[email] envoi refusé par Resend:", { to: mail.to, error });
+        return { sent: false, reason: error.message || "refus de Resend" };
+      }
+      return { sent: true };
+    },
+    async batch(mails) {
+      const { error } = await resend.batch.send(mails);
+      if (error) console.error("[email] lot non envoyé:", error);
+      return !error;
+    },
+  };
 }
 
 export async function sendReminderEmail(params: {
@@ -28,7 +81,7 @@ export async function sendReminderEmail(params: {
   serviceLabel: string;
   payUrl: string;
 }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
 
   const subject = `Rappel de votre don - ${synagogueName}`;
@@ -53,13 +106,13 @@ export async function sendReminderEmail(params: {
     </div>
   `;
 
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — e-mail non envoyé, contenu:", { to: params.to, subject });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — e-mail non envoyé, contenu:", { to: params.to, subject });
+    return { sent: false, reason: NO_MAILER };
   }
 
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, { from, to: params.to, subject, html });
+  const from = mailer.from;
+  return mailer.send({ from, to: params.to, subject, html });
 }
 
 function escapeHtml(s: string): string {
@@ -74,7 +127,7 @@ export async function sendStatementEmail(params: {
   total: number;
   payUrl: string;
 }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
   const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
@@ -111,13 +164,13 @@ export async function sendStatementEmail(params: {
     </div>
   `;
 
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — relevé non envoyé:", { to: params.to, subject });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — relevé non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: NO_MAILER };
   }
 
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, { from, to: params.to, subject, html });
+  const from = mailer.from;
+  return mailer.send({ from, to: params.to, subject, html });
 }
 
 // Reçu fiscal en pièce jointe (PDF).
@@ -131,7 +184,7 @@ export async function sendReceiptEmail(params: {
   year: number;
   pdf: Buffer;
 }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const eur = params.amount.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
   const subject =
     params.kind === "annuel"
@@ -151,13 +204,13 @@ export async function sendReceiptEmail(params: {
     </div>
   `;
 
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — reçu non envoyé:", { to: params.to, subject });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — reçu non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: NO_MAILER };
   }
 
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, {
+  const from = mailer.from;
+  return mailer.send({
     from,
     to: params.to,
     subject,
@@ -168,7 +221,7 @@ export async function sendReceiptEmail(params: {
 
 // Lien de connexion à l'espace fidèle.
 export async function sendDonorLoginEmail(params: { to: string; donorName: string; url: string }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
   const subject = `Votre accès à l'espace fidèle - ${synagogueName}`;
   const html = `
@@ -185,31 +238,35 @@ export async function sendDonorLoginEmail(params: { to: string; donorName: strin
       <p style="color:#666;font-size:12px;">Ce lien est personnel et valable 30 jours. Si vous n'avez rien demandé, ignorez cet e-mail.</p>
     </div>
   `;
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — lien de connexion non envoyé:", { to: params.to });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — lien de connexion non envoyé:", { to: params.to });
+    return { sent: false, reason: NO_MAILER };
   }
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, { from, to: params.to, subject, html });
+  const from = mailer.from;
+  return mailer.send({ from, to: params.to, subject, html });
 }
 
-// Message groupé (annonce, newsletter) : envoi par lots de 100 via l'API
-// batch de Resend, un e-mail personnalisé par destinataire.
+// Message groupé (annonce, newsletter) : un e-mail personnalisé par
+// destinataire, par lots de 100 avec Resend, un par un avec Gmail.
 export async function sendBulkMessages(
   messages: { to: string; subject: string; html: string }[]
 ): Promise<{ sent: number; failed: number; reason?: string }> {
-  const resend = getResend();
-  if (!resend) return { sent: 0, failed: messages.length, reason: "RESEND_API_KEY manquant" };
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const mailer = getMailer();
+  if (!mailer) return { sent: 0, failed: messages.length, reason: NO_MAILER };
+  const mails = messages.map((m) => ({ from: mailer.from, ...m }));
   let sent = 0;
   let failed = 0;
-  for (let i = 0; i < messages.length; i += 100) {
-    const chunk = messages.slice(i, i + 100);
-    const { error } = await resend.batch.send(chunk.map((m) => ({ from, ...m })));
-    if (error) {
-      console.error("[email] lot non envoyé:", error);
-      failed += chunk.length;
-    } else sent += chunk.length;
+  if (mailer.batch) {
+    for (let i = 0; i < mails.length; i += 100) {
+      const chunk = mails.slice(i, i + 100);
+      if (await mailer.batch(chunk)) sent += chunk.length;
+      else failed += chunk.length;
+    }
+  } else {
+    for (const m of mails) {
+      if ((await mailer.send(m)).sent) sent++;
+      else failed++;
+    }
   }
   return { sent, failed };
 }
@@ -240,7 +297,7 @@ export async function sendHazkaraEmail(params: {
   date: string; // yyyy-mm-dd
   hebrew: string;
 }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const d = new Date(`${params.date}T12:00:00`);
@@ -264,12 +321,12 @@ export async function sendHazkaraEmail(params: {
       <p>Que son âme repose en paix.</p>
     </div>
   `;
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — rappel de hazkara non envoyé:", { to: params.to, subject });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — rappel de hazkara non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: NO_MAILER };
   }
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, { from, to: params.to, subject, html });
+  const from = mailer.from;
+  return mailer.send({ from, to: params.to, subject, html });
 }
 
 // Confirmation des places attribuées pour les fêtes.
@@ -281,7 +338,7 @@ export async function sendSeatConfirmationEmail(params: {
   due: number;
   payUrl: string | null;
 }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
   const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
   const subject = `Vos places - ${params.planName}`;
@@ -301,12 +358,12 @@ export async function sendSeatConfirmationEmail(params: {
       <p>Chana tova !</p>
     </div>
   `;
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — confirmation de places non envoyée:", { to: params.to });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — confirmation de places non envoyée:", { to: params.to });
+    return { sent: false, reason: NO_MAILER };
   }
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, { from, to: params.to, subject, html });
+  const from = mailer.from;
+  return mailer.send({ from, to: params.to, subject, html });
 }
 
 // Billet d'événement : QR code en pièce jointe et lien vers le billet.
@@ -319,7 +376,7 @@ export async function sendTicketEmail(params: {
   url: string;
   qrPng: Buffer;
 }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
   const when = new Date(`${params.event.date}:00`).toLocaleString("fr-FR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -336,12 +393,12 @@ export async function sendTicketEmail(params: {
       <p style="font-size:20px;letter-spacing:3px;font-weight:bold;text-align:center;">${escapeHtml(params.code)}</p>
     </div>
   `;
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — billet non envoyé:", { to: params.to, subject });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — billet non envoyé:", { to: params.to, subject });
+    return { sent: false, reason: NO_MAILER };
   }
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, {
+  const from = mailer.from;
+  return mailer.send({
     from,
     to: params.to,
     subject,
@@ -351,7 +408,7 @@ export async function sendTicketEmail(params: {
 }
 
 export async function sendMikveEmail(params: { to: string; name: string; when: string; instructions: string; cancelUrl: string }) {
-  const resend = getResend();
+  const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
   const subject = `Réservation du mikvé - ${params.when}`;
   const html = `
@@ -363,10 +420,10 @@ export async function sendMikveEmail(params: { to: string; name: string; when: s
       <p style="font-size:13px;color:#555;">Empêchement ? <a href="${params.cancelUrl}">Annuler la réservation</a></p>
     </div>
   `;
-  if (!resend) {
-    console.warn("[email] RESEND_API_KEY absent — confirmation mikvé non envoyée:", { to: params.to });
-    return { sent: false, reason: "RESEND_API_KEY manquant" };
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — confirmation mikvé non envoyée:", { to: params.to });
+    return { sent: false, reason: NO_MAILER };
   }
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  return deliver(resend, { from, to: params.to, subject, html });
+  const from = mailer.from;
+  return mailer.send({ from, to: params.to, subject, html });
 }
