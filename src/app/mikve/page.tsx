@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatEUR } from "@/lib/format";
+import PublicPage from "@/components/PublicPage";
 
 function dayLabel(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
@@ -53,14 +54,11 @@ function MikveBooking() {
   }
 
   const wrap = (children: React.ReactNode) => (
-    <div className="min-h-screen bg-cream px-4 py-10">
-      <div className="max-w-lg mx-auto space-y-6">
-        <h1 className="text-2xl font-serif font-bold text-ink text-center">Réservation du mikvé</h1>
-        {cancel === "ok" && <p className="card p-4 text-sm text-green-700">Votre réservation a été annulée.</p>}
-        {cancel === "erreur" && <p className="card p-4 text-sm text-red-600">Lien d'annulation invalide.</p>}
-        {children}
-      </div>
-    </div>
+    <PublicPage title="Réservation du mikvé" subtitle="Choisissez votre créneau en toute discrétion">
+      {cancel === "ok" && <p className="card p-4 text-sm text-green-700">Votre réservation a été annulée.</p>}
+      {cancel === "erreur" && <p className="card p-4 text-sm text-red-600">Lien d'annulation invalide.</p>}
+      {children}
+    </PublicPage>
   );
 
   if (!data) return wrap(<p className="text-center text-gray-500">Chargement…</p>);

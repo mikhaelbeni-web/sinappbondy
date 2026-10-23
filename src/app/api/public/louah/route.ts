@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { computeLouah } from "@/lib/louah";
 
+// Données lues à chaque requête : pas de pré-rendu au build.
+export const dynamic = "force-dynamic";
+
 // Données de l'écran louah (public : affiché sur la TV de la synagogue).
 export async function GET() {
   try {

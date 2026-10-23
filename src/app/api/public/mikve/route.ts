@@ -3,6 +3,9 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { sendMikveEmail } from "@/lib/email";
 import { bookableDates, bookingId, formatSlot, getMikveSettings, mikveCancelUrl, parisNow, slotsFor } from "@/lib/mikve";
 
+// Données lues à chaque requête : pas de pré-rendu au build.
+export const dynamic = "force-dynamic";
+
 // Disponibilités publiques : uniquement libre / pris, jamais qui a réservé.
 export async function GET() {
   try {

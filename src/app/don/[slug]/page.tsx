@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import DonateForm from "@/components/DonateForm";
+import PublicPage from "@/components/PublicPage";
 import { formatEUR } from "@/lib/format";
 
 // Page publique d'une campagne de dons (lien ou QR code).
@@ -36,12 +37,7 @@ export default function CampaignPage() {
   const pct = campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : 0;
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-10">
-      <div className="max-w-lg mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-serif font-bold text-ink">{campaign.title}</h1>
-          {campaign.description && <p className="text-gray-600 mt-2 whitespace-pre-line">{campaign.description}</p>}
-        </div>
+    <PublicPage title={campaign.title} subtitle={campaign.description ? <span className="whitespace-pre-line">{campaign.description}</span> : undefined}>
 
         {campaign.goal > 0 && (
           <div className="card p-4 space-y-2">
@@ -50,7 +46,7 @@ export default function CampaignPage() {
               <span className="text-gray-500">objectif {formatEUR(campaign.goal)}</span>
             </div>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-full bg-gold" style={{ width: `${pct}%` }} />
+              <div className="h-full bg-gold-sand rounded-full" style={{ width: `${pct}%` }} />
             </div>
             <p className="text-xs text-gray-500">{campaign.donations} don(s) · {pct} %</p>
           </div>
@@ -59,7 +55,6 @@ export default function CampaignPage() {
         <div className="card p-6">
           <DonateForm campaign={slug} suggested={campaign.suggestedAmounts} />
         </div>
-      </div>
-    </div>
+    </PublicPage>
   );
 }

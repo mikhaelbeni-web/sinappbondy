@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { formatEUR } from "@/lib/format";
+import PublicPage from "@/components/PublicPage";
 
 function formatDateTime(date: string) {
   return new Date(`${date}:00`).toLocaleString("fr-FR", {
@@ -68,14 +69,16 @@ export default function EventPage() {
   const maxQty = Math.min(20, event.remaining ?? 20);
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-10">
-      <div className="max-w-lg mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-serif font-bold text-ink">{event.title}</h1>
-          <p className="text-gray-700 mt-2 first-letter:uppercase">{formatDateTime(event.date)}</p>
-          {event.location && <p className="text-gray-500">{event.location}</p>}
-          {event.description && <p className="text-gray-600 mt-3 whitespace-pre-line">{event.description}</p>}
-        </div>
+    <PublicPage
+      title={event.title}
+      subtitle={
+        <>
+          <span className="block first-letter:uppercase">{formatDateTime(event.date)}</span>
+          {event.location && <span className="block">{event.location}</span>}
+        </>
+      }
+    >
+      {event.description && <p className="card p-5 text-sm text-gray-700 whitespace-pre-line">{event.description}</p>}
 
         <div className="card p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 text-sm">
@@ -124,7 +127,6 @@ export default function EventPage() {
             </form>
           )}
         </div>
-      </div>
-    </div>
+    </PublicPage>
   );
 }

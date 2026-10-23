@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import PublicPage from "@/components/PublicPage";
 import { useSearchParams } from "next/navigation";
 import { formatEUR, formatDate, METHOD_LABELS, STATUS_LABELS } from "@/lib/format";
 
@@ -85,19 +86,16 @@ function EspaceInner() {
   const totalPaid = data.payments.reduce((s: number, p: any) => s + p.amount, 0);
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <p className="text-sm text-gray-500">{name}</p>
-            <h1 className="text-2xl font-serif font-bold text-ink">
-              Chalom {data.donor.firstName} {data.donor.lastName}
-            </h1>
-          </div>
-          <button onClick={logout} className="text-sm text-gray-500 hover:text-ink self-start sm:self-auto">
-            Déconnexion
-          </button>
-        </div>
+    <PublicPage
+      width="max-w-2xl"
+      title={`Chalom ${data.donor.firstName} ${data.donor.lastName}`}
+      subtitle={name}
+      aside={
+        <button onClick={logout} className="text-sm text-white/80 hover:text-white shrink-0">
+          Déconnexion
+        </button>
+      }
+    >
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="card p-4">
@@ -164,8 +162,7 @@ function EspaceInner() {
             </div>
           ))}
         </Section>
-      </div>
-    </div>
+    </PublicPage>
   );
 }
 

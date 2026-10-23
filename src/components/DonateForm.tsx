@@ -42,13 +42,13 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div>
         <label className="label">Montant</label>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <div className="flex flex-wrap gap-2">
           {amounts.map((a) => (
             <button
               type="button"
               key={a}
               onClick={() => setAmount(String(a))}
-              className={`rounded-md border px-2 py-2 text-sm font-medium ${Number(amount) === a ? "bg-gold text-white border-gold" : "bg-white border-gray-300 text-ink hover:border-gold"}`}
+              className={Number(amount) === a ? "chip-active" : "chip hover:bg-cream"}
             >
               {a} €
             </button>
@@ -57,7 +57,7 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
             type="number"
             min="1"
             step="1"
-            className="input col-span-3 sm:col-span-1"
+            className="input basis-full"
             placeholder="Autre"
             value={amounts.includes(Number(amount)) ? "" : amount}
             onChange={(e) => setAmount(e.target.value)}
