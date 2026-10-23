@@ -17,6 +17,7 @@ export default function SeatingPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [sections, setSections] = useState(DEFAULT_SECTIONS);
   const [error, setError] = useState("");
+  const [deleted, setDeleted] = useState("");
 
   async function load() {
     const res = await fetch("/api/seating");
@@ -26,6 +27,12 @@ export default function SeatingPage() {
 
   useEffect(() => {
     load();
+    // Retour de la page du plan après suppression.
+    const name = new URLSearchParams(window.location.search).get("deleted");
+    if (name) {
+      setDeleted(name);
+      window.history.replaceState(null, "", "/seating");
+    }
   }, []);
 
   async function create(e: React.FormEvent) {
@@ -56,6 +63,8 @@ export default function SeatingPage() {
         <h1 className="text-2xl font-serif font-bold text-ink">Places des fêtes</h1>
         <button className="btn-gold" onClick={() => setShow((v) => !v)}>{show ? "Fermer" : "+ Nouveau plan"}</button>
       </div>
+
+      {deleted && <p className="text-sm text-green-700">Plan « {deleted} » supprimé.</p>}
 
       {show && (
         <form onSubmit={create} className="card p-4 space-y-3">

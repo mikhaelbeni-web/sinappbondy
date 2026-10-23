@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatEUR } from "@/lib/format";
 import { rowLetter, seatId, seatLabel } from "@/lib/seating";
@@ -25,6 +25,10 @@ export default function SeatingPlanPage() {
   const [highlight, setHighlight] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   async function load() {
     const [pRes, dRes] = await Promise.all([fetch(`/api/seating/${planId}`), fetch("/api/donors")]);
@@ -106,11 +110,44 @@ export default function SeatingPlanPage() {
     await load();
   }
 
+  // Première validation : boîte de confirmation. La seconde (saisie du nom
+  // du plan) se fait dans l'encadré qui s'ouvre ensuite.
+  function askDelete() {
+    const paidSeats = seats.filter((s) => s.pledgeId && s.paid > 0).length;
+    if (paidSeats) {
+      setDeleteError(`${paidSeats} place(s) déjà (en partie) réglée(s) : ce plan ne peut pas être supprimé. Supprimez d'abord ces paiements.`);
+      setDeleting(true);
+      return;
+    }
+    if (!confirm(`Supprimer définitivement le plan « ${plan.name} » ?\n\n${seats.length} place(s) attribuée(s) seront supprimées et les sommes dues correspondantes annulées. Cette action est irréversible.`)) return;
+    setDeleteError("");
+    setConfirmName("");
+    setDeleting(true);
+  }
+
+  async function removePlan() {
+    setBusy(true);
+    setDeleteError("");
+    const res = await fetch(`/api/seating/${planId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmName }),
+    });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setDeleteError(d.error || "Suppression impossible.");
+      return;
+    }
+    router.push(`/seating?deleted=${encodeURIComponent(plan.name)}`);
+  }
+
   if (!plan) return <p className="text-gray-500">Chargement…</p>;
 
   const capacity = plan.sections.reduce((s: number, x: any) => s + x.rows * x.seatsPerRow, 0);
   const families = new Set(seats.map((s) => s.donorId)).size;
   const due = seats.reduce((s, x) => s + x.remaining, 0);
+  const hasPaid = seats.some((s) => s.pledgeId && s.paid > 0);
 
   return (
     <div className="space-y-6">
@@ -245,6 +282,39 @@ export default function SeatingPlanPage() {
         <span><span className="inline-block w-3 h-3 bg-gold align-middle mr-1" />Sélectionnée</span>
         <span><span className="inline-block w-3 h-3 bg-amber-100 border border-amber-300 align-middle mr-1" />À régler</span>
         <span><span className="inline-block w-3 h-3 bg-green-100 border border-green-300 align-middle mr-1" />Réglée ou offerte</span>
+      </div>
+
+      <div className="card p-4 space-y-3 border-red-200 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-red-700">Supprimer ce plan</h2>
+            <p className="text-sm text-gray-500">Supprime le plan et ses {seats.length} place(s) attribuée(s), et annule les sommes dues non réglées. Irréversible.</p>
+          </div>
+          {!deleting && (
+            <button className="btn-danger shrink-0 self-start sm:self-auto" onClick={askDelete}>Supprimer le plan</button>
+          )}
+        </div>
+        {deleting && (
+          <div className="space-y-3">
+            {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+            {!hasPaid && (
+              <>
+                <label className="block text-sm text-gray-700">
+                  Pour confirmer, saisissez le nom du plan : <strong className="text-ink">{plan.name}</strong>
+                </label>
+                <input className="input max-w-sm" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} autoComplete="off" />
+              </>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {!hasPaid && (
+                <button className="btn-danger" disabled={busy || confirmName.trim() !== plan.name} onClick={removePlan}>
+                  {busy ? "Suppression…" : "Supprimer définitivement"}
+                </button>
+              )}
+              <button className="btn-secondary" disabled={busy} onClick={() => { setDeleting(false); setDeleteError(""); setConfirmName(""); }}>Annuler</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
