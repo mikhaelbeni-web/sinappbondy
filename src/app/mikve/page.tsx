@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatEUR } from "@/lib/format";
 import PublicPage from "@/components/PublicPage";
+import Combobox from "@/components/Combobox";
 
 function dayLabel(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
@@ -87,11 +88,11 @@ function MikveBooking() {
       <div className="card p-4 space-y-4">
         <div>
           <label className="label">Jour</label>
-          <select className="input" value={day.date} onChange={(e) => { setDate(e.target.value); setTime(""); }}>
-            {data.days.map((d: any) => (
-              <option key={d.date} value={d.date}>{dayLabel(d.date)}</option>
-            ))}
-          </select>
+          <Combobox
+            value={day.date}
+            onChange={(v) => { setDate(v); setTime(""); }}
+            options={data.days.map((d: any) => ({ value: d.date, label: dayLabel(d.date) }))}
+          />
         </div>
         <div>
           <label className="label">Heure</label>

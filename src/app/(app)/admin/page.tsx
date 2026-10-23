@@ -268,7 +268,7 @@ function TeamTab() {
             <select required className="input" value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>
               <option value="">— Choisir —</option>
               {roles.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>{r.name}{r.isAdmin ? " (tous accès)" : ""}</option>
               ))}
             </select>
           </div>
@@ -291,7 +291,7 @@ function TeamTab() {
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <select className="input w-full sm:w-40" value={m.roleId} onChange={(e) => changeRole(m.id, e.target.value)}>
                 {roles.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+                  <option key={r.id} value={r.id}>{r.name}{r.isAdmin ? " (tous accès)" : ""}</option>
                 ))}
               </select>
               <button onClick={() => toggleActive(m.id, m.active)} className="btn-secondary text-xs px-2 py-1">
@@ -308,6 +308,21 @@ function TeamTab() {
 function PaymentsTab() {
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [test, setTest] = useState<any>(null);
+  const [testing, setTesting] = useState(false);
+
+  async function runTest() {
+    setTesting(true);
+    setTest(null);
+    try {
+      const res = await fetch("/api/payments", { method: "POST" });
+      setTest(await res.json());
+    } catch {
+      setTest({ ok: false, error: "Impossible de joindre le serveur." });
+    } finally {
+      setTesting(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/payments")
@@ -330,6 +345,18 @@ function PaymentsTab() {
         </p>
       )}
       {status?.error && <p className="text-sm text-red-600 break-words">{status.error}</p>}
+      <p className="text-sm text-gray-600 break-all">Adresse de l&apos;appli (NEXT_PUBLIC_APP_URL) : {status?.appUrl || "manquante"}</p>
+      <div className="pt-2 border-t space-y-2">
+        <button type="button" className="btn-secondary" disabled={testing} onClick={runTest}>
+          {testing ? "Test en cours…" : "Tester un paiement de 1 €"}
+        </button>
+        {test?.ok && (
+          <p className="text-sm text-green-700 break-all">
+            HelloAsso accepte les paiements. <a className="underline" href={test.redirectUrl} target="_blank" rel="noreferrer">Ouvrir la page de paiement test</a> (rien n&apos;est enregistré dans l&apos;appli).
+          </p>
+        )}
+        {test && !test.ok && <p className="text-sm text-red-600 break-words">{test.error}</p>}
+      </div>
       <div className="text-sm text-gray-500 pt-2 border-t">
         <p>URL de notification à déclarer dans HelloAsso (Mon compte &gt; Intégrations et API) :</p>
         <code className="text-xs bg-gray-100 rounded px-2 py-1 block mt-1 break-all">{status?.webhookUrl}</code>

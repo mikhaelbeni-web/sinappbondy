@@ -22,7 +22,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     // Lien signé : le montant (reste dû) est recalculé au moment du clic.
     const link = payUrl({ kind: "pledge", id: pledge.id });
 
-    await sendReminderEmail({
+    const sent = await sendReminderEmail({
       to: pledge.donorEmail,
       donorName: pledge.donorName,
       amount: remainingOf(pledge),
@@ -30,6 +30,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       serviceLabel: pledge.serviceLabel,
       payUrl: link,
     });
+    if (!sent.sent) return jsonError(`E-mail non envoyé : ${sent.reason}.`, 400);
 
     const now = new Date().toISOString();
     await ref.update({

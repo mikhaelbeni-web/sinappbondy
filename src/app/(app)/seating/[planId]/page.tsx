@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatEUR } from "@/lib/format";
 import { rowLetter, seatId, seatLabel } from "@/lib/seating";
+import { filterByQuery } from "@/lib/search";
 
 interface Donor { id: string; firstName: string; lastName: string; }
 
@@ -41,8 +42,7 @@ export default function SeatingPlanPage() {
   const byId = useMemo(() => new Map(seats.map((s) => [s.id, s])), [seats]);
   const matches = useMemo(() => {
     if (!donorQuery) return [];
-    const q = donorQuery.toLowerCase();
-    return donors.filter((d) => `${d.firstName} ${d.lastName}`.toLowerCase().includes(q)).slice(0, 8);
+    return filterByQuery(donors, donorQuery, (d) => `${d.firstName} ${d.lastName}`).slice(0, 8);
   }, [donors, donorQuery]);
 
   function click(sectionId: string, row: number, seat: number) {

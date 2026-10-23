@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { formatEUR, METHOD_LABELS, remainingOf, todayISO } from "@/lib/format";
+import { filterByQuery } from "@/lib/search";
+import Combobox from "@/components/Combobox";
 
 interface Donor { id: string; firstName: string; lastName: string; }
 
@@ -34,8 +36,7 @@ export default function PaymentForm({
 
   const matches = useMemo(() => {
     if (!donors || !donorQuery) return [];
-    const q = donorQuery.toLowerCase();
-    return donors.filter((d) => `${d.firstName} ${d.lastName}`.toLowerCase().includes(q)).slice(0, 8);
+    return filterByQuery(donors, donorQuery, (d) => `${d.firstName} ${d.lastName}`).slice(0, 8);
   }, [donors, donorQuery]);
 
   async function submit(e: React.FormEvent) {
@@ -106,22 +107,21 @@ export default function PaymentForm({
       {pledges && (
         <div>
           <label className="label">Affecter à</label>
-          <select
-            className="input"
+          <Combobox
             value={pledgeId}
-            onChange={(e) => {
-              setPledgeId(e.target.value);
-              const p = openPledges.find((x) => x.id === e.target.value);
+            onChange={(id) => {
+              setPledgeId(id);
+              const p = openPledges.find((x) => x.id === id);
               if (p) setAmount(String(remainingOf(p)));
             }}
-          >
-            <option value="">Promesses les plus anciennes d'abord ({formatEUR(totalDue)} dû)</option>
-            {openPledges.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.catalogItemName} · {p.serviceLabel} · reste {formatEUR(remainingOf(p))}
-              </option>
-            ))}
-          </select>
+            placeholder={`Promesses les plus anciennes d'abord (${formatEUR(totalDue)} dû)`}
+            emptyLabel={`Promesses les plus anciennes d'abord (${formatEUR(totalDue)} dû)`}
+            options={openPledges.map((p) => ({
+              value: p.id,
+              label: `${p.catalogItemName} · ${p.serviceLabel}`,
+              hint: `reste ${formatEUR(remainingOf(p))}`,
+            }))}
+          />
         </div>
       )}
 
