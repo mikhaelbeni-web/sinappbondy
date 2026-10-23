@@ -6,6 +6,20 @@ function getResend(): Resend | null {
   return new Resend(key);
 }
 
+type Delivery = { sent: true } | { sent: false; reason: string };
+
+// Resend renvoie ses refus (domaine non vérifié, adresse invalide…) dans
+// `error` sans lever d'exception : on les remonte pour ne pas afficher
+// « envoyé » à tort.
+async function deliver(resend: Resend, payload: Parameters<Resend["emails"]["send"]>[0]): Promise<Delivery> {
+  const { error } = await resend.emails.send(payload);
+  if (error) {
+    console.error("[email] envoi refusé par Resend:", { to: payload.to, error });
+    return { sent: false, reason: error.message || "refus de Resend" };
+  }
+  return { sent: true };
+}
+
 export async function sendReminderEmail(params: {
   to: string;
   donorName: string;
@@ -45,8 +59,7 @@ export async function sendReminderEmail(params: {
   }
 
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({ from, to: params.to, subject, html });
-  return { sent: true };
+  return deliver(resend, { from, to: params.to, subject, html });
 }
 
 function escapeHtml(s: string): string {
@@ -104,8 +117,7 @@ export async function sendStatementEmail(params: {
   }
 
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({ from, to: params.to, subject, html });
-  return { sent: true };
+  return deliver(resend, { from, to: params.to, subject, html });
 }
 
 // Reçu fiscal en pièce jointe (PDF).
@@ -145,14 +157,13 @@ export async function sendReceiptEmail(params: {
   }
 
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({
+  return deliver(resend, {
     from,
     to: params.to,
     subject,
     html,
     attachments: [{ filename: `recu-fiscal-${params.number.replace("/", "-")}.pdf`, content: params.pdf }],
   });
-  return { sent: true };
 }
 
 // Lien de connexion à l'espace fidèle.
@@ -179,8 +190,7 @@ export async function sendDonorLoginEmail(params: { to: string; donorName: strin
     return { sent: false, reason: "RESEND_API_KEY manquant" };
   }
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({ from, to: params.to, subject, html });
-  return { sent: true };
+  return deliver(resend, { from, to: params.to, subject, html });
 }
 
 // Message groupé (annonce, newsletter) : envoi par lots de 100 via l'API
@@ -259,8 +269,7 @@ export async function sendHazkaraEmail(params: {
     return { sent: false, reason: "RESEND_API_KEY manquant" };
   }
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({ from, to: params.to, subject, html });
-  return { sent: true };
+  return deliver(resend, { from, to: params.to, subject, html });
 }
 
 // Confirmation des places attribuées pour les fêtes.
@@ -297,8 +306,7 @@ export async function sendSeatConfirmationEmail(params: {
     return { sent: false, reason: "RESEND_API_KEY manquant" };
   }
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({ from, to: params.to, subject, html });
-  return { sent: true };
+  return deliver(resend, { from, to: params.to, subject, html });
 }
 
 // Billet d'événement : QR code en pièce jointe et lien vers le billet.
@@ -333,14 +341,13 @@ export async function sendTicketEmail(params: {
     return { sent: false, reason: "RESEND_API_KEY manquant" };
   }
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({
+  return deliver(resend, {
     from,
     to: params.to,
     subject,
     html,
     attachments: [{ filename: `billet-${params.code}.png`, content: params.qrPng }],
   });
-  return { sent: true };
 }
 
 export async function sendMikveEmail(params: { to: string; name: string; when: string; instructions: string; cancelUrl: string }) {
@@ -361,6 +368,5 @@ export async function sendMikveEmail(params: { to: string; name: string; when: s
     return { sent: false, reason: "RESEND_API_KEY manquant" };
   }
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  await resend.emails.send({ from, to: params.to, subject, html });
-  return { sent: true };
+  return deliver(resend, { from, to: params.to, subject, html });
 }
