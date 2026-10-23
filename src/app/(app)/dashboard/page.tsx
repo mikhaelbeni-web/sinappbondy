@@ -59,12 +59,22 @@ export default function DashboardPage() {
     setMessage("");
     try {
       const res = await fetch("/api/reminders/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      const json = await res.json();
-      const ok = json.results?.filter((r: any) => r.ok).length || 0;
-      setMessage(`${ok} / ${json.results?.length || 0} relance(s) envoyée(s).`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+      const results: { ok: boolean; error?: string }[] = json.results || [];
+      if (!results.length) {
+        setMessage("Aucune promesse à relancer.");
+      } else {
+        const ok = results.filter((r) => r.ok).length;
+        // Motifs d'échec regroupés (ex. « Pas d'e-mail (3) ») pour savoir quoi corriger.
+        const reasons = new Map<string, number>();
+        for (const r of results) if (!r.ok) reasons.set(r.error || "Erreur", (reasons.get(r.error || "Erreur") || 0) + 1);
+        const detail = Array.from(reasons, ([reason, n]) => `${reason} (${n})`).join(" ; ");
+        setMessage(`${ok} / ${results.length} relance(s) envoyée(s).${detail ? ` Échecs : ${detail}.` : ""}`);
+      }
       await load();
-    } catch {
-      setMessage("Erreur lors des relances.");
+    } catch (err: any) {
+      setMessage(`Erreur lors des relances : ${err.message}`);
     } finally {
       setSending(false);
     }
@@ -78,7 +88,7 @@ export default function DashboardPage() {
         <h1 className="page-title">Tableau de bord</h1>
         <p className="page-subtitle">Vue d'ensemble de l'activité</p>
       </div>
-      {message && <p className="text-sm text-gray-600">{message}</p>}
+      {message && <p className="text-sm text-gray-600 break-words">{message}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="card p-4 lg:col-span-2">
