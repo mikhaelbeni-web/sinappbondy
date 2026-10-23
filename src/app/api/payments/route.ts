@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withPermission, handleApiError } from "@/lib/apiHelpers";
-import { getHelloAssoOrganization, isHelloAssoSandbox } from "@/lib/helloasso";
+import { getHelloAssoOrganization, isHelloAssoSandbox, testHelloAssoCheckout } from "@/lib/helloasso";
 
 // État de la configuration HelloAsso, pour l'écran Admin > Paiements.
 export async function GET() {
@@ -27,9 +27,24 @@ export async function GET() {
       organizationSlug,
       organizationName,
       sandbox: isHelloAssoSandbox(),
+      appUrl: process.env.NEXT_PUBLIC_APP_URL || null,
       error,
       webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/helloasso/webhook`,
     });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+// Test de création d'un paiement HelloAsso (1 €, rien n'est enregistré).
+export async function POST() {
+  try {
+    await withPermission("gerer_paiements");
+    try {
+      return NextResponse.json({ ok: true, redirectUrl: await testHelloAssoCheckout() });
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message || "Erreur inconnue." });
+    }
   } catch (err) {
     return handleApiError(err);
   }

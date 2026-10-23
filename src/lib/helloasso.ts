@@ -31,6 +31,7 @@ export function isHelloAssoSandbox(): boolean {
 // Jeton OAuth2 (client_credentials), valable 30 minutes : gardé en mémoire
 // le temps de vie de l'instance pour ne pas en redemander à chaque appel.
 let token: { access: string; refresh: string | null; expiresAt: number } | null = null;
+let lastTokenError = "";
 
 async function requestToken(body: Record<string, string>) {
   const res = await fetch(`${apiHost()}/oauth2/token`, {
@@ -39,7 +40,10 @@ async function requestToken(body: Record<string, string>) {
     body: new URLSearchParams(body).toString(),
     cache: "no-store",
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    lastTokenError = `${res.status} ${(await res.text()).slice(0, 300)}`;
+    return null;
+  }
   const json = (await res.json()) as any;
   return {
     access: json.access_token as string,
@@ -60,7 +64,7 @@ async function accessToken(): Promise<string> {
   if (!next) {
     next = await requestToken({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
   }
-  if (!next) throw new Error("HelloAsso refuse l'identification (vérifier l'identifiant et le secret du client API).");
+  if (!next) throw new Error(`HelloAsso refuse l'identification (vérifier l'identifiant et le secret du client API) : ${lastTokenError}`);
   token = next;
   return token.access;
 }
@@ -77,7 +81,15 @@ async function api(path: string, init?: { method?: string; body?: unknown }): Pr
   });
   const text = await res.text();
   if (!res.ok) {
-    const err: any = new Error(`HelloAsso ${res.status} : ${text.slice(0, 500)}`);
+    const hint =
+      res.status === 409
+        ? "l'association ne peut pas encore recevoir de paiements sur HelloAsso (compte à faire valider : justificatifs, IBAN)"
+        : res.status === 401 || res.status === 403
+          ? "accès refusé (identifiants ou droits du client API, ou mauvais HELLOASSO_ORGANIZATION_SLUG)"
+          : res.status === 404
+            ? "association introuvable (vérifier HELLOASSO_ORGANIZATION_SLUG)"
+            : "";
+    const err: any = new Error(`HelloAsso ${res.status}${hint ? ` : ${hint}` : ""} : ${text.slice(0, 500)}`);
     err.status = res.status;
     throw err;
   }
@@ -101,19 +113,7 @@ export async function createCheckout(params: {
 }): Promise<string> {
   const db = adminDb();
   const ref = db.collection("checkouts").doc();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const cents = Math.round(params.amount * 100);
-
-  const body: any = {
-    totalAmount: cents,
-    initialAmount: cents,
-    itemName: params.label.slice(0, 250),
-    backUrl: `${appUrl}/merci?annule=1`,
-    errorUrl: `${appUrl}/merci?erreur=paiement`,
-    returnUrl: `${appUrl}/api/helloasso/return/${ref.id}`,
-    containsDonation: params.containsDonation,
-    metadata: { ref: ref.id },
-  };
+  const body = checkoutBody(params.amount, params.label, params.containsDonation, ref.id);
   const payer: Record<string, string> = {};
   if (params.email) payer.email = params.email;
   if (params.firstName) payer.firstName = params.firstName;
@@ -140,6 +140,41 @@ export async function createCheckout(params: {
     status: "en_attente",
     createdAt: new Date().toISOString(),
   });
+  return intent.redirectUrl as string;
+}
+
+// HelloAsso n'accepte que des URL de retour en https.
+function appUrl(): string {
+  const url = (process.env.NEXT_PUBLIC_APP_URL || "").trim().replace(/\/+$/, "");
+  if (!/^https:\/\//.test(url)) {
+    throw new Error(`NEXT_PUBLIC_APP_URL doit commencer par https:// (valeur actuelle : « ${url} »).`);
+  }
+  return url;
+}
+
+function checkoutBody(amount: number, label: string, containsDonation: boolean, ref: string) {
+  const cents = Math.round(amount * 100);
+  const base = appUrl();
+  return {
+    totalAmount: cents,
+    initialAmount: cents,
+    itemName: label.slice(0, 250),
+    backUrl: `${base}/merci?annule=1`,
+    errorUrl: `${base}/merci?erreur=paiement`,
+    returnUrl: `${base}/api/helloasso/return/${ref}`,
+    containsDonation,
+    metadata: { ref },
+  };
+}
+
+// Test depuis Admin > Paiements : crée un paiement de 1 € (non enregistré
+// dans l'appli) pour afficher la réponse exacte de HelloAsso.
+export async function testHelloAssoCheckout(): Promise<string> {
+  const intent = await api(`/organizations/${encodeURIComponent(orgSlug())}/checkout-intents`, {
+    method: "POST",
+    body: checkoutBody(1, "Test de configuration", true, "test"),
+  });
+  if (!intent?.redirectUrl) throw new Error("HelloAsso n'a pas renvoyé d'URL de paiement.");
   return intent.redirectUrl as string;
 }
 
