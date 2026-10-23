@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1));
     }
 
-    // Lien « régler tout le solde » à copier ou envoyer (null si Stripe n'est pas configuré).
+    // Lien « régler tout le solde » à copier ou envoyer (null si la signature des liens n'est pas configurée).
     let balancePayUrl: string | null = null;
     try {
       balancePayUrl = payUrl({ kind: "donor", id: params.id });

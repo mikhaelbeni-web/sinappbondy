@@ -9,7 +9,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = ["cb_en_ligne", "cb_terminal", "
 // - pledgeId fourni : tout le montant va sur cette promesse.
 // - sinon : affectation aux promesses ouvertes, de la plus ancienne à la plus récente.
 // Le reliquat éventuel reste sur le paiement (champ unallocated).
-// `id` permet l'idempotence (ex. id de la session Stripe Checkout).
+// `id` permet l'idempotence (ex. id du checkout HelloAsso).
 export async function recordPayment(params: {
   id?: string;
   donorId: string;
@@ -22,7 +22,7 @@ export async function recordPayment(params: {
   allocate?: boolean; // false : don libre, non affecté aux promesses
   campaignId?: string | null;
   eventId?: string | null;
-  stripeCheckoutSessionId?: string | null;
+  onlineCheckoutId?: string | null;
   createdBy: string;
   createdByName: string;
 }): Promise<PaymentDoc | null> {
@@ -83,7 +83,7 @@ export async function recordPayment(params: {
         amountPaid: newPaid,
         status: p.status === "annule" ? "annule" : fullyPaid ? "paye" : "partiel",
         paidAt: fullyPaid ? p.paidAt || now : null,
-        ...(params.stripeCheckoutSessionId ? { stripeCheckoutSessionId: params.stripeCheckoutSessionId } : {}),
+        ...(params.onlineCheckoutId ? { onlineCheckoutId: params.onlineCheckoutId } : {}),
         updatedAt: now,
       });
       allocations.push({ pledgeId: p.id, amount: round2(part) });
@@ -107,7 +107,7 @@ export async function recordPayment(params: {
       eventId: params.eventId || null,
       nonDeductible,
       depositId: null,
-      stripeCheckoutSessionId: params.stripeCheckoutSessionId || null,
+      onlineCheckoutId: params.onlineCheckoutId || null,
       createdBy: params.createdBy,
       createdByName: params.createdByName,
       createdAt: now,
@@ -171,8 +171,8 @@ export async function deletePayment(paymentId: string): Promise<void> {
 // recalculé côté serveur au moment du clic.
 
 function linkSecret(): string {
-  const s = process.env.PAY_LINK_SECRET || process.env.STRIPE_SECRET_KEY;
-  if (!s) throw new Error("PAY_LINK_SECRET (ou STRIPE_SECRET_KEY) manquant.");
+  const s = process.env.PAY_LINK_SECRET || process.env.HELLOASSO_CLIENT_SECRET;
+  if (!s) throw new Error("PAY_LINK_SECRET (ou HELLOASSO_CLIENT_SECRET) manquant.");
   return s;
 }
 

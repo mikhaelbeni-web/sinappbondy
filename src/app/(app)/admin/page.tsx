@@ -320,14 +320,20 @@ function PaymentsTab() {
 
   return (
     <div className="card p-4 space-y-3 max-w-lg">
-      <Row label="Clé secrète Stripe" ok={status?.hasSecretKey} />
-      <Row label="Secret de webhook Stripe" ok={status?.hasWebhookSecret} />
-      {status?.accountEmail && <p className="text-sm text-gray-600">Compte Stripe : {status.accountEmail}</p>}
-      {status?.error && <p className="text-sm text-red-600">{status.error}</p>}
+      <Row label="Identifiant du client API (HELLOASSO_CLIENT_ID)" ok={status?.hasClientId} />
+      <Row label="Secret du client API (HELLOASSO_CLIENT_SECRET)" ok={status?.hasClientSecret} />
+      <Row label="Association (HELLOASSO_ORGANIZATION_SLUG)" ok={!!status?.organizationSlug} />
+      {status?.organizationName && (
+        <p className="text-sm text-gray-600">
+          Compte HelloAsso : {status.organizationName}
+          {status.sandbox && <span className="ml-2 text-amber-700 font-medium">(environnement de test)</span>}
+        </p>
+      )}
+      {status?.error && <p className="text-sm text-red-600 break-words">{status.error}</p>}
       <div className="text-sm text-gray-500 pt-2 border-t">
-        <p>URL de webhook à configurer dans Stripe :</p>
+        <p>URL de notification à déclarer dans HelloAsso (Mon compte &gt; Intégrations et API) :</p>
         <code className="text-xs bg-gray-100 rounded px-2 py-1 block mt-1 break-all">{status?.webhookUrl}</code>
-        <p className="mt-1">Événement à écouter : <code>checkout.session.completed</code></p>
+        <p className="mt-1">Les reçus fiscaux des paiements en ligne sont émis par l&apos;appli : désactivez ceux de HelloAsso pour éviter un double reçu.</p>
       </div>
     </div>
   );

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { remainingOf, round2 } from "@/lib/format";
 import { verifyPayTarget, type PayTarget } from "@/lib/payments";
-import { createCheckoutSession } from "@/lib/stripeHelpers";
+import { createCheckout } from "@/lib/helloasso";
 
 // Lien de paiement public (envoyé par e-mail) : ?pledge=<id>&t=<signature>
 // ou ?donor=<id>&t=<signature> pour régler tout le solde du fidèle.
-// Le montant est recalculé à chaque clic, puis redirection vers Stripe.
+// Le montant est recalculé à chaque clic, puis redirection vers HelloAsso.
 export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
   const { searchParams } = new URL(req.url);
@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
     let amount = 0;
     let label = "";
     let email = "";
+    let firstName = "";
+    let lastName = "";
     let metadata: Record<string, string>;
 
     if (target.kind === "pledge") {
@@ -47,15 +49,17 @@ export async function GET(req: NextRequest) {
       amount = round2(snap.docs.reduce((s, d) => s + remainingOf(d.data() as any), 0));
       label = `Solde de vos dons - ${donor.firstName} ${donor.lastName}`;
       email = donor.email;
+      firstName = donor.firstName;
+      lastName = donor.lastName;
       metadata = { kind: "donor", donorId: target.id };
     }
 
     if (amount <= 0) return NextResponse.redirect(`${appUrl}/merci?deja=1`, 303);
 
-    const url = await createCheckoutSession({ amount, label, email, metadata });
+    const url = await createCheckout({ amount, label, email, firstName, lastName, containsDonation: true, metadata });
     return NextResponse.redirect(url, 303);
   } catch (err) {
     console.error("[pay]", err);
-    return NextResponse.redirect(`${appUrl}/merci?erreur=stripe`, 303);
+    return NextResponse.redirect(`${appUrl}/merci?erreur=paiement`, 303);
   }
 }

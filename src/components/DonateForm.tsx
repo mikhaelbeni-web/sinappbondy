@@ -110,7 +110,7 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
       <button type="submit" disabled={loading || n < 1} className="btn-gold w-full py-3 text-base">
         {loading ? "Redirection vers le paiement…" : `Donner ${n > 0 ? n.toLocaleString("fr-FR") + " €" : ""}`}
       </button>
-      <p className="text-xs text-gray-400 text-center">Paiement sécurisé par carte bancaire (Stripe).</p>
+      <p className="text-xs text-gray-400 text-center">Paiement sécurisé par carte bancaire (HelloAsso).</p>
     </form>
   );
 }
