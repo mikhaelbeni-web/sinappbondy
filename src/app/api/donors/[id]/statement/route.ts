@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { withPermission, handleApiError } from "@/lib/apiHelpers";
 import { sendDonorStatement } from "@/lib/statements";
 
+export const maxDuration = 30;
+
 // Envoie au fidèle son relevé avec un lien unique pour régler tout le solde.
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {

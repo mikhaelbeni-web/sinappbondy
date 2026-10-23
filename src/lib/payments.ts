@@ -165,6 +165,17 @@ export async function deletePayment(paymentId: string): Promise<void> {
   });
 }
 
+// E-mail à utiliser pour une promesse : celui de la fiche du fidèle (à jour),
+// à défaut celui copié sur la promesse à sa création.
+export async function donorEmailOf(pledge: { donorId?: string; donorEmail?: string }): Promise<string> {
+  if (pledge.donorId) {
+    const snap = await adminDb().collection("donors").doc(pledge.donorId).get();
+    const email = snap.exists ? (snap.data() as any).email : "";
+    if (email) return email;
+  }
+  return pledge.donorEmail || "";
+}
+
 // ---- Liens de paiement signés (sans connexion) ----
 // Le lien porte une signature HMAC de la cible : seul quelqu'un qui a reçu
 // le lien peut ouvrir la page de paiement, et le montant est toujours

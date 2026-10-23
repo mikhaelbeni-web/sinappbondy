@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { formatEUR, formatDate, METHOD_LABELS, paidOf, remainingOf } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import PaymentForm from "@/components/PaymentForm";
 import HazkarotSection from "@/components/HazkarotSection";
+import Toast, { readJson, type Notice } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
 
 export default function DonorDetailPage() {
@@ -19,12 +20,16 @@ export default function DonorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [reminding, setReminding] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  // Résultat des envois (relance, relevé) : en bas de l'écran, toujours visible.
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const closeNotice = useCallback(() => setNotice(null), []);
   const [showPayment, setShowPayment] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
 
-  async function load() {
-    setLoading(true);
+  // `quiet` : rafraîchit sans repasser par « Chargement… » (garde le défilement).
+  async function load(quiet = false) {
+    if (!quiet) setLoading(true);
     const res = await fetch(`/api/donors/${id}`);
     const data = await res.json();
     setDonor(data.donor);
@@ -42,15 +47,14 @@ export default function DonorDetailPage() {
 
   async function relancer(pledgeId: string) {
     setReminding(pledgeId);
-    setMessage("");
+    setNotice(null);
     try {
       const res = await fetch(`/api/pledges/${pledgeId}/remind`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setMessage("Relance envoyée.");
-      await load();
+      const data = await readJson(res);
+      setNotice({ ok: true, text: `Relance envoyée${data.to ? ` à ${data.to}` : ""}.` });
+      await load(true);
     } catch (err: any) {
-      setMessage(err.message);
+      setNotice({ ok: false, text: `Relance non envoyée : ${err.message}` });
     } finally {
       setReminding(null);
     }
@@ -58,15 +62,14 @@ export default function DonorDetailPage() {
 
   async function envoyerReleve() {
     setReminding("releve");
-    setMessage("");
+    setNotice(null);
     try {
       const res = await fetch(`/api/donors/${id}/statement`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setMessage(`Relevé envoyé (${formatEUR(data.total)} à régler).`);
-      await load();
+      const data = await readJson(res);
+      setNotice({ ok: true, text: `Relevé envoyé à ${donor.email} (${formatEUR(data.total)} à régler).` });
+      await load(true);
     } catch (err: any) {
-      setMessage(err.message);
+      setNotice({ ok: false, text: `Relevé non envoyé : ${err.message}` });
     } finally {
       setReminding(null);
     }
@@ -237,6 +240,7 @@ export default function DonorDetailPage() {
       )}
 
       {message && <p className="text-sm text-gray-600 break-all print:hidden">{message}</p>}
+      <Toast notice={notice} onClose={closeNotice} />
 
       <div className="card">
         <div className="p-4 border-b">
