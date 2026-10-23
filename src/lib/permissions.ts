@@ -77,3 +77,17 @@ export function hasPermission(
   if (role.isAdmin) return true;
   return !!role.permissions?.includes(key);
 }
+
+// Un seul poste a accès à tout : "Administrateur", créé à l'installation.
+// On refuse les noms qui s'y confondent pour éviter un doublon trompeur
+// (ex : un poste "admin" qui n'aurait en réalité que quelques droits).
+const RESERVED_ROLE_NAMES = ["admin", "administrateur", "administratrice", "superadmin"];
+
+export function isReservedRoleName(name: string): boolean {
+  const clean = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+  return RESERVED_ROLE_NAMES.includes(clean);
+}

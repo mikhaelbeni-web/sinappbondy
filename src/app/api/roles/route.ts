@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
-import { PERMISSION_KEYS, type PermissionKey } from "@/lib/permissions";
+import { PERMISSION_KEYS, isReservedRoleName, type PermissionKey } from "@/lib/permissions";
 
 export async function GET() {
   try {
@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
     await withPermission("gerer_postes");
     const { name, permissions } = await req.json();
     if (!name || typeof name !== "string") return jsonError("Nom du poste requis.", 400);
+    if (isReservedRoleName(name)) {
+      return jsonError("Le poste « Administrateur » existe déjà et a accès à tout. Choisissez un autre nom.", 400);
+    }
 
     const cleanPerms: PermissionKey[] = Array.isArray(permissions)
       ? permissions.filter((p: string) => PERMISSION_KEYS.includes(p as PermissionKey))
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const ref = adminDb().collection("roles").doc();
-    const doc = { id: ref.id, name, isAdmin: false, permissions: cleanPerms, createdAt: now };
+    const doc = { id: ref.id, name: name.trim(), isAdmin: false, permissions: cleanPerms, createdAt: now };
     await ref.set(doc);
     return NextResponse.json({ role: doc });
   } catch (err) {
