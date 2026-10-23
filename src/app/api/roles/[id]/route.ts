@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
-import { PERMISSION_KEYS, type PermissionKey } from "@/lib/permissions";
+import { PERMISSION_KEYS, isReservedRoleName, type PermissionKey } from "@/lib/permissions";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -13,6 +13,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (existing.isAdmin) return jsonError("Le poste Administrateur ne peut pas être modifié.", 400);
 
     const { name, permissions } = await req.json();
+    if (typeof name === "string" && isReservedRoleName(name)) {
+      return jsonError("Le poste « Administrateur » existe déjà et a accès à tout. Choisissez un autre nom.", 400);
+    }
     const update: any = {};
     if (typeof name === "string" && name.trim()) update.name = name.trim();
     if (Array.isArray(permissions)) {

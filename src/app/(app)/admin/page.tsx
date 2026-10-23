@@ -268,7 +268,7 @@ function TeamTab() {
             <select required className="input" value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>
               <option value="">— Choisir —</option>
               {roles.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>{r.name}{r.isAdmin ? " (tous accès)" : ""}</option>
               ))}
             </select>
           </div>
@@ -291,7 +291,7 @@ function TeamTab() {
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <select className="input w-full sm:w-40" value={m.roleId} onChange={(e) => changeRole(m.id, e.target.value)}>
                 {roles.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+                  <option key={r.id} value={r.id}>{r.name}{r.isAdmin ? " (tous accès)" : ""}</option>
                 ))}
               </select>
               <button onClick={() => toggleActive(m.id, m.active)} className="btn-secondary text-xs px-2 py-1">
