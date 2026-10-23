@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatEUR, formatDate, paidOf, remainingOf } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import Combobox from "@/components/Combobox";
+import Toast, { readJson, type Notice } from "@/components/Toast";
 import { filterByQuery } from "@/lib/search";
 import { useAuth } from "@/context/AuthContext";
 
@@ -46,8 +47,9 @@ function PledgesPageInner() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
-  // Retour des relances, affiché au-dessus de la liste (le formulaire est hors écran).
-  const [remindNotice, setRemindNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  // Retour des relances, affiché en bas de l'écran (le formulaire est hors écran).
+  const [remindNotice, setRemindNotice] = useState<Notice | null>(null);
+  const closeNotice = useCallback(() => setRemindNotice(null), []);
   const [statusFilter, setStatusFilter] = useState("");
 
   async function loadAll() {
@@ -139,9 +141,8 @@ function PledgesPageInner() {
     setRemindNotice(null);
     try {
       const res = await fetch(`/api/pledges/${pledgeId}/remind`, { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-      setRemindNotice({ ok: true, text: `Relance envoyée à ${donorName}.` });
+      const data = await readJson(res);
+      setRemindNotice({ ok: true, text: `Relance envoyée à ${donorName}${data.to ? ` (${data.to})` : ""}.` });
       await loadAll();
     } catch (err: any) {
       setRemindNotice({ ok: false, text: `Relance de ${donorName} : ${err.message}` });
@@ -291,9 +292,7 @@ function PledgesPageInner() {
         </select>
       </div>
 
-      {remindNotice && (
-        <p className={`text-sm break-words ${remindNotice.ok ? "text-green-700" : "text-red-600"}`}>{remindNotice.text}</p>
-      )}
+      <Toast notice={remindNotice} onClose={closeNotice} />
 
       <div className="card divide-y">
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}

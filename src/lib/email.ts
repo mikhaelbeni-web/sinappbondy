@@ -18,7 +18,7 @@ type Mailer = {
 
 const NO_MAILER = "envoi d'e-mails non configuré (GMAIL_USER ou RESEND_API_KEY)";
 
-// Connexion SMTP réutilisée d'un envoi à l'autre (relances groupées).
+// Transport SMTP réutilisé d'un envoi à l'autre (relances groupées).
 let gmailTransport: nodemailer.Transporter | null = null;
 
 // Deux services possibles : Gmail (SMTP, sans nom de domaine, environ
@@ -27,10 +27,15 @@ function getMailer(): Mailer | null {
   const gmailUser = process.env.GMAIL_USER;
   const gmailPassword = process.env.GMAIL_APP_PASSWORD;
   if (gmailUser && gmailPassword) {
+    // Pas de pool : sur Vercel la fonction s'arrête après la réponse, une
+    // connexion gardée ouverte peut rester bloquée. Délais courts pour que
+    // l'erreur remonte avant la limite de durée de la fonction.
     gmailTransport ??= nodemailer.createTransport({
       service: "gmail",
-      pool: true,
       auth: { user: gmailUser, pass: gmailPassword.replace(/\s+/g, "") },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
     });
     const transport = gmailTransport;
     const name = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "Synagogue";
@@ -80,35 +85,39 @@ export async function sendReminderEmail(params: {
   catalogItemName: string;
   serviceLabel: string;
   payUrl: string;
+  senderName?: string; // nom de l'association (Administration), sinon NEXT_PUBLIC_SYNAGOGUE_NAME
 }) {
   const mailer = getMailer();
-  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const name = params.senderName || process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
+  const amount = params.amount.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+  const item = params.catalogItemName ? ` pour <strong>${escapeHtml(params.catalogItemName)}</strong>` : "";
+  const service = params.serviceLabel ? ` lors de <strong>${escapeHtml(params.serviceLabel)}</strong>` : "";
 
-  const subject = `Rappel de votre don - ${synagogueName}`;
+  const subject = `Votre promesse de don de ${amount} - ${name}`;
   const html = `
     <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
-      <h2 style="color: #b8860b;">${synagogueName}</h2>
-      <p>Chalom ${params.donorName},</p>
+      <h2 style="color: #b8860b;">${escapeHtml(name)}</h2>
+      <p>Bonjour ${escapeHtml(params.donorName)},</p>
       <p>
-        Lors de <strong>${params.serviceLabel}</strong>, vous avez fait une promesse de don
-        pour <strong>${params.catalogItemName}</strong> d'un montant de
-        <strong>${params.amount.toLocaleString("fr-FR")} €</strong>.
+        Suite à votre promesse de don de <strong>${amount}</strong>${item}${service},
+        nous vous remercions de bien vouloir la régler en cliquant sur le bouton ci-dessous.
+        Le paiement est sécurisé et ne prend qu'une minute.
       </p>
-      <p>Nous vous remercions de bien vouloir régulariser ce don en cliquant sur le lien ci-dessous :</p>
       <p style="text-align: center; margin: 32px 0;">
         <a href="${params.payUrl}"
            style="background:#b8860b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;">
-          Régler mon don de ${params.amount.toLocaleString("fr-FR")} €
+          Régler ma promesse de ${amount}
         </a>
       </p>
-      <p>Toda raba pour votre générosité.</p>
+      <p>Si vous avez déjà réglé ce don, merci de ne pas tenir compte de ce message.</p>
+      <p>Merci pour votre générosité.<br />${escapeHtml(name)}</p>
       <p style="color:#666;font-size:12px;">Si le bouton ne fonctionne pas, copiez ce lien : ${params.payUrl}</p>
     </div>
   `;
 
   if (!mailer) {
     console.warn("[email] envoi non configuré — e-mail non envoyé, contenu:", { to: params.to, subject });
-    return { sent: false, reason: NO_MAILER };
+    return { sent: false as const, reason: NO_MAILER };
   }
 
   const from = mailer.from;

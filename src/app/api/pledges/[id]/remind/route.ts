@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { sendReminderEmail } from "@/lib/email";
-import { payUrl } from "@/lib/payments";
+import { payUrl, donorEmailOf } from "@/lib/payments";
 import { remainingOf } from "@/lib/format";
+import { getAssociation } from "@/lib/associationServer";
+
+// Laisse le temps à Gmail de répondre (ou d'échouer) avant la coupure.
+export const maxDuration = 30;
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -15,15 +19,19 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     if (pledge.status === "paye") return jsonError("Ce don a déjà été payé.", 400);
     if (pledge.status === "annule") return jsonError("Cette promesse a été annulée.", 400);
-    if (!pledge.donorEmail) {
-      return jsonError("Ce fidèle n'a pas d'adresse e-mail enregistrée.", 400);
+    // L'e-mail copié sur la promesse peut dater d'avant sa saisie sur la fiche.
+    const to = await donorEmailOf(pledge);
+    if (!to) {
+      return jsonError(`${pledge.donorName || "Ce fidèle"} n'a pas d'adresse e-mail : ajoutez-la sur sa fiche.`, 400);
     }
 
     // Lien signé : le montant (reste dû) est recalculé au moment du clic.
     const link = payUrl({ kind: "pledge", id: pledge.id });
 
+    const association = await getAssociation();
     const sent = await sendReminderEmail({
-      to: pledge.donorEmail,
+      senderName: association.legalName,
+      to,
       donorName: pledge.donorName,
       amount: remainingOf(pledge),
       catalogItemName: pledge.catalogItemName,
@@ -41,7 +49,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       updatedAt: now,
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, to });
   } catch (err) {
     return handleApiError(err);
   }

@@ -3,8 +3,11 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { hasPermission } from "@/lib/permissions";
 import { sendReminderEmail } from "@/lib/email";
-import { payUrl } from "@/lib/payments";
+import { payUrl, donorEmailOf } from "@/lib/payments";
 import { remainingOf } from "@/lib/format";
+import { getAssociation } from "@/lib/associationServer";
+
+export const maxDuration = 60;
 
 // Relance en une fois toutes les promesses restant dues (en attente, déjà relancées
 // ou partielles), visibles par
@@ -27,11 +30,13 @@ export async function POST(req: NextRequest) {
     }
 
     const results: { id: string; ok: boolean; error?: string }[] = [];
+    const { legalName } = await getAssociation();
 
     for (const d of docs) {
       const pledge = d.data() as any;
       try {
-        if (!pledge.donorEmail) {
+        const to = await donorEmailOf(pledge);
+        if (!to) {
           results.push({ id: d.id, ok: false, error: "Pas d'e-mail" });
           continue;
         }
@@ -39,7 +44,8 @@ export async function POST(req: NextRequest) {
         const link = payUrl({ kind: "pledge", id: pledge.id });
 
         const sent = await sendReminderEmail({
-          to: pledge.donorEmail,
+          senderName: legalName,
+          to,
           donorName: pledge.donorName,
           amount: remainingOf(pledge),
           catalogItemName: pledge.catalogItemName,
