@@ -3,11 +3,14 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError } from "@/lib/apiHelpers";
 import { hasPermission } from "@/lib/permissions";
 import { paidOf, remainingOf, round2 } from "@/lib/format";
+import { confirmPendingCheckouts } from "@/lib/helloasso";
 
 export async function GET() {
   try {
     const user = await withPermission();
     const seeAll = hasPermission(user.role, "voir_tout");
+    // Paiements HelloAsso dont la notification n'est pas arrivée.
+    await confirmPendingCheckouts().catch((err) => console.error("[dashboard] helloasso", err));
 
     let query: FirebaseFirestore.Query = adminDb().collection("pledges");
     if (!seeAll) {

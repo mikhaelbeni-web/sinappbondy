@@ -230,3 +230,45 @@ export async function confirmCheckout(checkoutId: string): Promise<boolean> {
   await ref.update({ status: "paye", orderId: String(order.id), paidAt: new Date().toISOString(), processingAt: null });
   return true;
 }
+
+// Filet de sécurité quand la notification HelloAsso n'arrive pas (l'URL de
+// notification du compte peut servir à un autre outil) et que le donateur a
+// fermé la page avant le retour : on revérifie les paniers en attente.
+// Appelée par le cron quotidien (force) et à l'ouverture du tableau de bord
+// (au plus une fois toutes les 10 minutes).
+export async function confirmPendingCheckouts(opts: { force?: boolean } = {}): Promise<{ confirmed: number; abandoned: number }> {
+  const result = { confirmed: 0, abandoned: 0 };
+  if (!process.env.HELLOASSO_CLIENT_ID || !process.env.HELLOASSO_ORGANIZATION_SLUG) return result;
+  const db = adminDb();
+
+  const lockRef = db.collection("settings").doc("helloassoSweep");
+  const due = await db.runTransaction(async (tx) => {
+    const last = (await tx.get(lockRef)).data()?.lastRunAt as string | undefined;
+    if (!opts.force && last && Date.now() - Date.parse(last) < 10 * 60_000) return false;
+    tx.set(lockRef, { lastRunAt: new Date().toISOString() }, { merge: true });
+    return true;
+  });
+  if (!due) return result;
+
+  const snap = await db.collection("checkouts").where("status", "==", "en_attente").get();
+  // HelloAsso considère un panier abandonné après 45 minutes ; on garde
+  // une marge de 3 jours avant de le classer.
+  const abandonBefore = Date.now() - 3 * 24 * 3600_000;
+  const pending = snap.docs
+    .map((d) => d.data() as any)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, 50);
+
+  for (const c of pending) {
+    try {
+      if (await confirmCheckout(c.id)) result.confirmed++;
+      else if (Date.parse(c.createdAt) < abandonBefore) {
+        await db.collection("checkouts").doc(c.id).update({ status: "abandonne" });
+        result.abandoned++;
+      }
+    } catch (err) {
+      console.error("[helloasso/pending]", c.id, err);
+    }
+  }
+  return result;
+}
