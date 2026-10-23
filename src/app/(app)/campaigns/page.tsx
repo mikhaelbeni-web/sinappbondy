@@ -85,8 +85,8 @@ export default function CampaignsPage() {
           <p className="text-gray-500 break-all">{generalUrl}</p>
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">
-          <button className="text-gold hover:underline" onClick={() => copy(generalUrl)}>Copier le lien</button>
-          <a className="text-gold hover:underline" href="/api/campaigns/general/qr" target="_blank" rel="noreferrer">QR code</a>
+          <button className="text-gold hover:underline tap" onClick={() => copy(generalUrl)}>Copier le lien</button>
+          <a className="text-gold hover:underline tap" href="/api/campaigns/general/qr" target="_blank" rel="noreferrer">QR code</a>
         </div>
       </div>
 
@@ -132,10 +132,10 @@ export default function CampaignsPage() {
                   <p className="text-gray-500 break-all">{c.url}</p>
                 </div>
                 <div className="flex flex-wrap gap-3 shrink-0">
-                  <button className="text-gold hover:underline" onClick={() => copy(c.url)}>Copier le lien</button>
-                  <a className="text-gold hover:underline" href={`/api/campaigns/${c.id}/qr`} target="_blank" rel="noreferrer">QR code</a>
-                  <a className="text-gold hover:underline" href={c.url} target="_blank" rel="noreferrer">Voir</a>
-                  <button className="text-gray-600 hover:underline" onClick={() => toggle(c)}>{c.active ? "Clôturer" : "Rouvrir"}</button>
+                  <button className="text-gold hover:underline tap" onClick={() => copy(c.url)}>Copier le lien</button>
+                  <a className="text-gold hover:underline tap" href={`/api/campaigns/${c.id}/qr`} target="_blank" rel="noreferrer">QR code</a>
+                  <a className="text-gold hover:underline tap" href={c.url} target="_blank" rel="noreferrer">Voir</a>
+                  <button className="text-gray-600 hover:underline tap" onClick={() => toggle(c)}>{c.active ? "Clôturer" : "Rouvrir"}</button>
                 </div>
               </div>
               <p className="text-gray-600">

@@ -36,7 +36,7 @@ export default function TreasuryPage() {
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`px-3 py-2 text-sm border-b-2 -mb-px whitespace-nowrap ${tab === k ? "border-gold text-ink" : "border-transparent text-gray-500 hover:text-ink"}`}
+            className={`tap px-3 py-2 text-sm border-b-2 -mb-px whitespace-nowrap ${tab === k ? "border-gold text-ink" : "border-transparent text-gray-500 hover:text-ink"}`}
           >
             {v}
           </button>
@@ -241,7 +241,7 @@ function Expenses({ year }: { year: number }) {
               </div>
               <div className="flex items-center gap-4 shrink-0">
                 <span className="font-semibold">{formatEUR(e.amount)}</span>
-                <button className="text-red-600 hover:underline" onClick={() => remove(e.id)}>Supprimer</button>
+                <button className="text-red-600 hover:underline tap" onClick={() => remove(e.id)}>Supprimer</button>
               </div>
             </div>
           ))}
@@ -311,7 +311,7 @@ function Deposits() {
               <button
                 key={m}
                 onClick={() => { setMethod(m); setSelected([]); }}
-                className={`rounded-full border px-3 py-1 text-sm ${method === m ? "bg-ink text-white border-ink" : "bg-white border-gray-300 text-ink"}`}
+                className={`tap rounded-full border px-3 py-1 text-sm ${method === m ? "bg-ink text-white border-ink" : "bg-white border-gray-300 text-ink"}`}
               >
                 {METHOD_LABELS[m]} ({pending.filter((p) => p.method === m).length})
               </button>
@@ -322,13 +322,13 @@ function Deposits() {
           {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
           {!loading && list.length === 0 && <p className="p-4 text-sm text-gray-500">Rien à remettre.</p>}
           {list.length > 0 && (
-            <label className="p-3 flex items-center gap-2 text-sm text-gray-600">
+            <label className="tap p-3 flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={selected.length === list.length} onChange={(e) => setSelected(e.target.checked ? list.map((p) => p.id) : [])} />
               Tout sélectionner
             </label>
           )}
           {list.map((p) => (
-            <label key={p.id} className="p-3 flex items-center gap-3 text-sm cursor-pointer">
+            <label key={p.id} className="tap p-3 flex items-center gap-3 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={selected.includes(p.id)}
@@ -371,7 +371,7 @@ function Deposits() {
           {deposits.map((d) => (
             <div key={d.id} className="p-4 text-sm space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <button className="text-left min-w-0" onClick={() => setOpen(open === d.id ? null : d.id)}>
+                <button className="tap text-left min-w-0" onClick={() => setOpen(open === d.id ? null : d.id)}>
                   <p className="font-medium text-ink">
                     {formatDate(d.date)} · {METHOD_LABELS[d.method]} · {d.count} pièce(s)
                     {d.reference ? ` · bordereau ${d.reference}` : ""}
@@ -380,7 +380,7 @@ function Deposits() {
                 </button>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="font-semibold">{formatEUR(d.total)}</span>
-                  <button className="text-red-600 hover:underline" onClick={() => remove(d.id)}>Supprimer</button>
+                  <button className="text-red-600 hover:underline tap" onClick={() => remove(d.id)}>Supprimer</button>
                 </div>
               </div>
               {open === d.id && (

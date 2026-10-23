@@ -85,7 +85,7 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="tap flex items-center gap-2 text-sm">
         <input type="checkbox" checked={wantReceipt} onChange={(e) => setWantReceipt(e.target.checked)} />
         Je souhaite recevoir un reçu fiscal
       </label>

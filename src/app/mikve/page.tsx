@@ -102,7 +102,7 @@ function MikveBooking() {
                 type="button"
                 disabled={!s.free}
                 onClick={() => setTime(s.time)}
-                className={`rounded border px-2 py-2 text-sm ${
+                className={`rounded border px-2 py-3 text-sm ${
                   !s.free ? "bg-gray-100 text-gray-400 line-through" : time === s.time ? "bg-ink text-white border-ink" : "bg-white border-gray-300 text-ink"
                 }`}
               >

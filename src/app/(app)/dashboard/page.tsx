@@ -114,7 +114,7 @@ export default function DashboardPage() {
             ))}
           </div>
           {can("saisir_promesses") && (
-            <Link href="/pledges" className="mt-2 pt-3 border-t border-gray-100 flex items-center justify-center gap-1 text-xs font-semibold text-ink hover:underline">
+            <Link href="/pledges" className="mt-2 pt-3 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:pt-0 border-t border-gray-100 flex items-center justify-center gap-1 text-xs font-semibold text-ink hover:underline">
               Voir tout l'historique <ChevronRight size={14} />
             </Link>
           )}
@@ -205,9 +205,9 @@ function KpiCard({
       </div>
       <div className="flex justify-end mt-3">
         {onClick ? (
-          <button onClick={onClick}>{cta}</button>
+          <button onClick={onClick} className="tap justify-end">{cta}</button>
         ) : href ? (
-          <Link href={href}>{cta}</Link>
+          <Link href={href} className="tap justify-end">{cta}</Link>
         ) : null}
       </div>
     </div>

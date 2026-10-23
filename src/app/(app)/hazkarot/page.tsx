@@ -49,11 +49,11 @@ export default function HazkarotPage() {
 
       {settings && can("envoyer_relances") && (
         <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
-          <label className="flex items-center gap-2">
+          <label className="tap flex items-center gap-2">
             <input type="checkbox" checked={!!settings.enabled} onChange={(e) => saveSettings({ ...settings, enabled: e.target.checked })} />
             Prévenir la famille par e-mail
           </label>
-          <label className="flex items-center gap-2">
+          <label className="tap flex items-center gap-2">
             <input
               type="number"
               min="1"
@@ -77,7 +77,7 @@ export default function HazkarotPage() {
               <p className="font-medium text-ink">
                 {h.deceasedName} {h.relation && <span className="text-gray-500 font-normal">({h.relation})</span>}
               </p>
-              <Link href={`/donors/${h.donorId}`} className="text-gray-500 hover:underline">
+              <Link href={`/donors/${h.donorId}`} className="text-gray-500 hover:underline tap">
                 Famille : {h.donorName}
               </Link>
             </div>

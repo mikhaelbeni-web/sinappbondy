@@ -94,7 +94,7 @@ export default function MembershipsPage() {
             <input className="input flex-1 min-w-[8rem]" value={t.name} onChange={(e) => setTiers(tiers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
             <input type="number" min="0" className="input w-28" value={t.amount} onChange={(e) => setTiers(tiers.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value) } : x)))} />
             <span className="text-sm text-gray-500">€ / an</span>
-            <button className="text-xs text-red-600 hover:underline" onClick={() => setTiers(tiers.filter((_, j) => j !== i))}>Retirer</button>
+            <button className="text-xs text-red-600 hover:underline tap" onClick={() => setTiers(tiers.filter((_, j) => j !== i))}>Retirer</button>
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
@@ -127,7 +127,7 @@ export default function MembershipsPage() {
           <div className="flex flex-wrap gap-3">
             {data.groups.length === 0 && <p className="text-sm text-gray-500">Aucun groupe défini sur les fiches fidèles.</p>}
             {data.groups.map((g: string) => (
-              <label key={g} className="flex items-center gap-1.5 text-sm">
+              <label key={g} className="tap flex items-center gap-1.5 text-sm">
                 <input type="checkbox" checked={groups.includes(g)} onChange={(e) => setGroups((p) => (e.target.checked ? [...p, g] : p.filter((x) => x !== g)))} />
                 {g}
               </label>

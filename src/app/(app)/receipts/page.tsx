@@ -107,7 +107,7 @@ export default function ReceiptsPage() {
         <div className="card p-4 border-amber-300 bg-amber-50 text-sm">
           <p className="font-medium text-amber-800">Les reçus fiscaux s'activeront dès que la fiche de l'association sera complète.</p>
           <p className="text-amber-700 mt-1">À renseigner : {missing.join(", ")}.</p>
-          <Link href="/admin" className="text-gold hover:underline mt-2 inline-block">
+          <Link href="/admin" className="text-gold hover:underline mt-2 inline-block tap">
             Compléter dans Administration → Association
           </Link>
         </div>
@@ -138,7 +138,7 @@ export default function ReceiptsPage() {
               <p className="text-xs text-gray-500">Un reçu récapitulatif regroupe tous les paiements de l'année d'un fidèle.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm">
+              <label className="tap flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} />
                 Envoyer par e-mail
               </label>
@@ -151,7 +151,7 @@ export default function ReceiptsPage() {
             {pending.map((p) => (
               <div key={p.donorId} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
                 <div className="min-w-0">
-                  <Link href={`/donors/${p.donorId}`} className="font-medium text-ink hover:underline">
+                  <Link href={`/donors/${p.donorId}`} className="font-medium text-ink hover:underline tap">
                     {p.donorName}
                   </Link>
                   <p className="text-gray-500">
@@ -197,15 +197,15 @@ export default function ReceiptsPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3 shrink-0">
                 <span className="font-semibold">{formatEUR(r.amount)}</span>
-                <a href={`/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold text-xs hover:underline">
+                <a href={`/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold text-xs hover:underline tap">
                   PDF
                 </a>
                 {!r.cancelled && (
                   <>
-                    <button className="text-xs text-ink hover:underline" disabled={!!busy} onClick={() => resend(r.id)}>
+                    <button className="text-xs text-ink hover:underline tap" disabled={!!busy} onClick={() => resend(r.id)}>
                       {busy === r.id ? "Envoi…" : "Envoyer"}
                     </button>
-                    <button className="text-xs text-red-600 hover:underline" disabled={!!busy} onClick={() => cancel(r.id, r.number)}>
+                    <button className="text-xs text-red-600 hover:underline tap" disabled={!!busy} onClick={() => cancel(r.id, r.number)}>
                       Annuler
                     </button>
                   </>

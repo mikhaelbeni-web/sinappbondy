@@ -82,7 +82,7 @@ export default function MikveAdminPage() {
                   {b.name}{b.phone ? ` · ${b.phone}` : ""} · {b.email}
                 </p>
               </div>
-              <button className="text-red-600 hover:underline shrink-0 text-left" onClick={() => cancel(b)}>Annuler</button>
+              <button className="text-red-600 hover:underline shrink-0 text-left tap" onClick={() => cancel(b)}>Annuler</button>
             </div>
           ))}
         </div>
@@ -90,7 +90,7 @@ export default function MikveAdminPage() {
 
       <div className="card p-4 space-y-4">
         <h2 className="font-semibold text-ink">Réglages</h2>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="tap flex items-center gap-2 text-sm">
           <input type="checkbox" checked={settings.enabled} onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })} />
           Réservation en ligne ouverte
         </label>
@@ -118,15 +118,17 @@ export default function MikveAdminPage() {
                 <div className="flex-1 space-y-2">
                   {settings.schedule[d].length === 0 && <span className="text-gray-400">Fermé</span>}
                   {settings.schedule[d].map((r: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input type="time" className="input w-28" value={r.start} onChange={(e) => setRange(d, i, "start", e.target.value)} />
-                      <span>à</span>
-                      <input type="time" className="input w-28" value={r.end} onChange={(e) => setRange(d, i, "end", e.target.value)} />
-                      <button className="text-red-600 hover:underline" onClick={() => removeRange(d, i)}>Retirer</button>
+                    <div key={i} className="flex flex-wrap items-center gap-x-2">
+                      <span className="flex items-center gap-2 min-w-0 basis-full sm:basis-auto">
+                        <input type="time" className="input min-w-0 flex-1 sm:flex-none sm:w-28" value={r.start} onChange={(e) => setRange(d, i, "start", e.target.value)} />
+                        <span>à</span>
+                        <input type="time" className="input min-w-0 flex-1 sm:flex-none sm:w-28" value={r.end} onChange={(e) => setRange(d, i, "end", e.target.value)} />
+                      </span>
+                      <button className="text-red-600 hover:underline tap" onClick={() => removeRange(d, i)}>Retirer</button>
                     </div>
                   ))}
                 </div>
-                <button className="text-gold hover:underline shrink-0 text-left" onClick={() => addRange(d)}>+ Plage</button>
+                <button className="text-gold hover:underline shrink-0 text-left tap" onClick={() => addRange(d)}>+ Plage</button>
               </div>
             ))}
           </div>

@@ -89,7 +89,7 @@ export default function MessagesPage() {
                 key={k}
                 type="button"
                 onClick={() => setType(k)}
-                className={`rounded-full border px-3 py-1 text-sm ${type === k ? "bg-ink text-white border-ink" : "bg-white border-gray-300 text-ink"}`}
+                className={`tap rounded-full border px-3 py-1 text-sm ${type === k ? "bg-ink text-white border-ink" : "bg-white border-gray-300 text-ink"}`}
               >
                 {v}
               </button>
@@ -101,7 +101,7 @@ export default function MessagesPage() {
                 <p className="text-sm text-gray-500">Aucun groupe : ajoutez-en depuis la fiche d'un fidèle (bouton Modifier).</p>
               )}
               {groups.map((g) => (
-                <label key={g} className="flex items-center gap-1.5 text-sm">
+                <label key={g} className="tap flex items-center gap-1.5 text-sm">
                   <input
                     type="checkbox"
                     checked={selectedGroups.includes(g)}

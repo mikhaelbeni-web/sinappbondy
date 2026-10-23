@@ -34,7 +34,7 @@ export default function AdminPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px shrink-0 ${
+            className={`tap px-4 py-2 text-sm font-medium border-b-2 -mb-px shrink-0 ${
               tab === t.key ? "border-gold text-ink" : "border-transparent text-gray-500 hover:text-ink"
             }`}
           >
@@ -131,7 +131,7 @@ function RolesTab() {
             <label className="label">Autorisations</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {PERMISSIONS.map((p) => (
-                <label key={p.key} className="flex items-start gap-2 text-sm bg-gray-50 rounded-md p-2">
+                <label key={p.key} className="tap flex items-start gap-2 text-sm bg-gray-50 rounded-md p-2">
                   <input type="checkbox" checked={perms.includes(p.key)} onChange={() => togglePerm(p.key)} className="mt-1" />
                   <span>
                     <span className="font-medium">{p.label}</span>
@@ -341,9 +341,9 @@ function PaymentsTab() {
 
 function Row({ label, ok }: { label: string; ok: boolean }) {
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span>{label}</span>
-      <span className={ok ? "text-green-700 font-medium" : "text-red-600 font-medium"}>{ok ? "Configuré" : "Manquant"}</span>
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="min-w-0 break-words">{label}</span>
+      <span className={`shrink-0 ${ok ? "text-green-700 font-medium" : "text-red-600 font-medium"}`}>{ok ? "Configuré" : "Manquant"}</span>
     </div>
   );
 }
@@ -460,12 +460,12 @@ function AssociationTab() {
           <div key={key} className="sm:col-span-2">
             <label className="label">{label}</label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <input type="file" accept="image/png,image/jpeg" onChange={(e) => onImage(key, e.target.files?.[0])} className="text-sm" />
+              <input type="file" accept="image/png,image/jpeg" onChange={(e) => onImage(key, e.target.files?.[0])} className="tap text-sm" />
               {form[key] && (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={form[key]} alt={label} className="h-12 border rounded bg-white" />
-                  <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => setForm({ ...form, [key]: "" })}>
+                  <button type="button" className="text-xs text-red-600 hover:underline tap" onClick={() => setForm({ ...form, [key]: "" })}>
                     Retirer
                   </button>
                 </>
@@ -473,7 +473,7 @@ function AssociationTab() {
             </div>
           </div>
         ))}
-        <label className="sm:col-span-2 flex items-start gap-2 text-sm">
+        <label className="sm:col-span-2 tap flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-1" checked={!!form.autoReceipt} onChange={(e) => setForm({ ...form, autoReceipt: e.target.checked })} />
           <span>Envoyer automatiquement un reçu fiscal à chaque paiement. Décochez pour n'émettre qu'un reçu récapitulatif annuel.</span>
         </label>
@@ -541,7 +541,7 @@ function RemindersTab() {
           Chaque matin (10 h en été, 9 h en hiver, heure de Paris), les fidèles qui ont des promesses à relancer reçoivent un relevé unique de leur
           solde avec un lien de paiement. Pas d'envoi le Chabbat ni les jours de fête.
         </p>
-        <label className="flex items-center gap-2 text-sm font-medium">
+        <label className="tap flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" checked={!!form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
           Activer les relances automatiques
         </label>
@@ -666,10 +666,10 @@ function LouahTab() {
         </div>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 text-sm">
-        <label className="flex items-center gap-2">
+        <label className="tap flex items-center gap-2">
           <input type="checkbox" checked={s.showZmanim} onChange={(e) => setS({ ...s, showZmanim: e.target.checked })} /> Afficher les zmanim
         </label>
-        <label className="flex items-center gap-2">
+        <label className="tap flex items-center gap-2">
           <input type="checkbox" checked={s.showHazkarot} onChange={(e) => setS({ ...s, showHazkarot: e.target.checked })} /> Afficher les hazkarot (nom du défunt et date)
         </label>
       </div>
@@ -680,12 +680,12 @@ function LouahTab() {
             <div key={i} className="flex flex-col sm:flex-row gap-2">
               <input className="input" placeholder="ex : Cha'harit en semaine" value={t.label} onChange={(e) => setTime(i, "label", e.target.value)} />
               <input className="input sm:w-40" placeholder="ex : 7h00" value={t.value} onChange={(e) => setTime(i, "value", e.target.value)} />
-              <button className="text-red-600 hover:underline text-sm shrink-0 text-left" onClick={() => setS({ ...s, times: s.times.filter((_: any, j: number) => j !== i) })}>
+              <button className="text-red-600 hover:underline text-sm shrink-0 text-left tap" onClick={() => setS({ ...s, times: s.times.filter((_: any, j: number) => j !== i) })}>
                 Retirer
               </button>
             </div>
           ))}
-          <button className="text-gold hover:underline text-sm" onClick={() => setS({ ...s, times: [...s.times, { label: "", value: "" }] })}>
+          <button className="text-gold hover:underline text-sm tap" onClick={() => setS({ ...s, times: [...s.times, { label: "", value: "" }] })}>
             + Ajouter un horaire
           </button>
         </div>

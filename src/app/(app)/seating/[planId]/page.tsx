@@ -116,7 +116,7 @@ export default function SeatingPlanPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
         <div>
-          <Link href="/seating" className="text-sm text-gray-500 hover:underline">← Places des fêtes</Link>
+          <Link href="/seating" className="text-sm text-gray-500 hover:underline tap">← Places des fêtes</Link>
           <h1 className="text-2xl font-serif font-bold text-ink">{plan.name}</h1>
           <p className="text-sm text-gray-500">
             {seats.length} / {capacity} places · {families} famille(s) · reste à encaisser {formatEUR(due)}
@@ -140,16 +140,16 @@ export default function SeatingPlanPage() {
       {message && <p className="text-sm text-gray-700 print:hidden">{message}</p>}
 
       {(selected.length > 0 || focus) && (
-        <div className="card p-4 space-y-3 print:hidden sticky top-14 md:top-2 z-20">
+        <div className="card p-4 space-y-3 print:hidden [@media(min-height:560px)]:sticky top-14 md:top-2 z-20">
           {focus ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
               <p>
                 <strong>{seatLabel(plan.sections.find((s: any) => s.id === focus.sectionId)?.name || "", focus.row, focus.seat)}</strong> :{" "}
-                <Link href={`/donors/${focus.donorId}`} className="text-gold hover:underline">{focus.donorName}</Link>
+                <Link href={`/donors/${focus.donorId}`} className="text-gold hover:underline tap">{focus.donorName}</Link>
                 {focus.pledgeId ? (focus.remaining > 0 ? ` · reste ${formatEUR(focus.remaining)}` : " · réglée") : " · offerte"}
                 {focus.confirmedAt ? " · confirmée" : ""}
               </p>
-              <button className="text-red-600 text-sm hover:underline" onClick={() => release(focus.id)}>Libérer</button>
+              <button className="text-red-600 text-sm hover:underline tap" onClick={() => release(focus.id)}>Libérer</button>
             </div>
           ) : (
             <>
@@ -173,7 +173,7 @@ export default function SeatingPlanPage() {
                       <button
                         type="button"
                         key={d.id}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                        className="block w-full text-left px-3 py-3 text-sm hover:bg-gray-50"
                         onClick={() => {
                           setDonorId(d.id);
                           setDonorQuery(`${d.firstName} ${d.lastName}`);
@@ -187,7 +187,7 @@ export default function SeatingPlanPage() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-sm">
+                <label className="tap flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={bill} onChange={(e) => setBill(e.target.checked)} />
                   Facturer au tarif de la section
                 </label>
@@ -227,7 +227,7 @@ export default function SeatingPlanPage() {
                         type="button"
                         title={taken ? `${rowLetter(row)}${seat} · ${taken.donorName}` : `${rowLetter(row)}${seat} · libre`}
                         onClick={() => click(sec.id, row, seat)}
-                        className={`w-9 h-9 sm:w-11 sm:h-9 rounded border text-[10px] leading-tight overflow-hidden ${color} ${hl ? "ring-2 ring-ink" : ""}`}
+                        className={`w-9 h-9 sm:w-11 sm:h-11 rounded border text-[10px] leading-tight overflow-hidden ${color} ${hl ? "ring-2 ring-ink" : ""}`}
                       >
                         {taken ? taken.donorName.split(" ").slice(-1)[0].slice(0, 6) : seat}
                       </button>

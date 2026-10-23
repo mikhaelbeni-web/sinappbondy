@@ -88,7 +88,7 @@ export default function PaymentForm({
                 <button
                   type="button"
                   key={d.id}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  className="block w-full text-left px-3 py-3 text-sm hover:bg-gray-50"
                   onClick={() => {
                     setDonorId(d.id);
                     setDonorQuery(`${d.firstName} ${d.lastName}`);

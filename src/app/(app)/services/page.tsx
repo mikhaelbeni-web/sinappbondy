@@ -182,7 +182,7 @@ export default function ServicesPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="order-2 sm:order-1 flex items-center gap-2">
             <h2 className="font-semibold text-ink capitalize">{format(month, "MMMM yyyy", { locale: fr })}</h2>
-            <button onClick={() => setMonth(startOfMonth(new Date()))} className="text-xs text-gold hover:underline whitespace-nowrap">
+            <button onClick={() => setMonth(startOfMonth(new Date()))} className="text-xs text-gold hover:underline whitespace-nowrap tap">
               Aujourd'hui
             </button>
           </div>
@@ -248,12 +248,12 @@ export default function ServicesPage() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-ink">{formatDate(selectedDay)}</h3>
-            <button onClick={() => setSelectedDay(null)} className="text-xs text-gray-400 hover:text-ink">Fermer</button>
+            <button onClick={() => setSelectedDay(null)} className="tap justify-end text-xs text-gray-400 hover:text-ink">Fermer</button>
           </div>
           {selectedServices.length === 0 && <p className="text-sm text-gray-500">Aucun office ce jour-là.</p>}
           <div className="divide-y">
             {selectedServices.map((s) => (
-              <Link key={s.id} href={`/services/${s.id}`} className="flex flex-wrap items-center justify-between gap-1 py-2 hover:bg-gray-50 text-sm">
+              <Link key={s.id} href={`/services/${s.id}`} className="flex flex-wrap items-center justify-between gap-1 py-3 hover:bg-gray-50 text-sm">
                 <span className="text-ink min-w-0 break-words">{s.label}</span>
                 <span className="text-gray-500 shrink-0">{TYPE_LABELS[s.type] || s.type} · <span className="text-gold">Voir →</span></span>
               </Link>

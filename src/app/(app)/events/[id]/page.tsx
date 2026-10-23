@@ -85,7 +85,7 @@ export default function EventDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/events" className="text-sm text-gold hover:underline">← Événements</Link>
+      <Link href="/events" className="text-sm text-gold hover:underline tap">← Événements</Link>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-serif font-bold text-ink">{event.title}</h1>
@@ -121,9 +121,9 @@ export default function EventDetailPage() {
           {message && <p className="text-gray-600">{message}</p>}
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">
-          <button className="text-gold hover:underline" onClick={copy}>Copier le lien</button>
-          <a className="text-gold hover:underline" href={`/api/events/${id}/qr`} target="_blank" rel="noreferrer">QR code</a>
-          <a className="text-gold hover:underline" href={data.url} target="_blank" rel="noreferrer">Voir</a>
+          <button className="text-gold hover:underline tap" onClick={copy}>Copier le lien</button>
+          <a className="text-gold hover:underline tap" href={`/api/events/${id}/qr`} target="_blank" rel="noreferrer">QR code</a>
+          <a className="text-gold hover:underline tap" href={data.url} target="_blank" rel="noreferrer">Voir</a>
         </div>
       </div>
 
@@ -166,7 +166,7 @@ export default function EventDetailPage() {
               {r.checkedInAt ? (
                 <span className="text-green-700 shrink-0">Entré à {new Date(r.checkedInAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
               ) : (
-                <button className="text-gold hover:underline shrink-0 text-left" onClick={() => checkin(r.code)}>Valider l'entrée</button>
+                <button className="text-gold hover:underline shrink-0 text-left tap" onClick={() => checkin(r.code)}>Valider l'entrée</button>
               )}
             </div>
           ))}

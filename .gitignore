@@ -5,3 +5,7 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# Audit mobile : captures et résultats bruts régénérés à chaque passage
+qa-mobile/screenshots/
+qa-mobile/results.json
