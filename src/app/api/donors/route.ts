@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await withPermission("gerer_fideles");
-    const { firstName, lastName, email, phone, notes } = await req.json();
+    const { firstName, lastName, email, phone, notes, address, postalCode, city } = await req.json();
     if (!firstName || !lastName) return jsonError("Prénom et nom sont requis.", 400);
 
     const now = new Date().toISOString();
@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
       lastName: lastName.trim(),
       email: (email || "").trim(),
       phone: (phone || "").trim(),
+      address: (address || "").trim(),
+      postalCode: (postalCode || "").trim(),
+      city: (city || "").trim(),
       notes: notes || "",
       createdAt: now,
       updatedAt: now,

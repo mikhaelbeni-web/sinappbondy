@@ -4,6 +4,9 @@ import { handleApiError, jsonError } from "@/lib/apiHelpers";
 import { CATALOG_SEED } from "@/lib/catalogSeed";
 import { PERMISSION_KEYS } from "@/lib/permissions";
 
+// Données lues à chaque requête : pas de pré-rendu au build.
+export const dynamic = "force-dynamic";
+
 // Amorçage de l'application : ne fonctionne que si aucune équipe n'existe
 // encore. Crée le compte Firebase Auth, le poste "Administrateur" et le
 // premier membre de l'équipe, puis initialise le catalogue par défaut.

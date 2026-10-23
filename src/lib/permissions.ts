@@ -11,7 +11,8 @@ export type PermissionKey =
   | "saisir_promesses"
   | "envoyer_relances"
   | "voir_tout"
-  | "gerer_paiements";
+  | "gerer_paiements"
+  | "envoyer_messages";
 
 export const PERMISSIONS: { key: PermissionKey; label: string; description: string }[] = [
   {
@@ -58,6 +59,11 @@ export const PERMISSIONS: { key: PermissionKey; label: string; description: stri
     key: "gerer_paiements",
     label: "Gérer les paiements",
     description: "Voir la configuration Stripe et l'état des paiements de l'ensemble de la synagogue.",
+  },
+  {
+    key: "envoyer_messages",
+    label: "Envoyer des messages",
+    description: "Écrire par e-mail à tous les fidèles ou à un groupe (annonces, newsletter).",
   },
 ];
 
