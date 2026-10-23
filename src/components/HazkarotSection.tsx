@@ -52,7 +52,7 @@ export default function HazkarotSection({ donorId, canEdit }: { donorId: string;
       <div className="p-4 border-b flex items-center justify-between gap-2">
         <h2 className="font-semibold text-ink">Hazkarot</h2>
         {canEdit && (
-          <button className="text-sm text-gold hover:underline" onClick={() => setShow((v) => !v)}>
+          <button className="text-sm text-gold hover:underline tap" onClick={() => setShow((v) => !v)}>
             {show ? "Fermer" : "+ Ajouter"}
           </button>
         )}
@@ -72,7 +72,7 @@ export default function HazkarotSection({ donorId, canEdit }: { donorId: string;
             <label className="label">Date du décès (civile)</label>
             <input required type="date" className="input" value={form.deathDate} onChange={(e) => setForm({ ...form, deathDate: e.target.value })} />
           </div>
-          <label className="flex items-center gap-2 text-sm sm:mt-6">
+          <label className="tap flex items-center gap-2 text-sm sm:mt-6">
             <input type="checkbox" checked={form.afterSunset} onChange={(e) => setForm({ ...form, afterSunset: e.target.checked })} />
             Décès après le coucher du soleil
           </label>
@@ -98,7 +98,7 @@ export default function HazkarotSection({ donorId, canEdit }: { donorId: string;
                 </span>
               )}
               {canEdit && (
-                <button className="text-xs text-red-600 hover:underline" onClick={() => remove(h.id)}>Supprimer</button>
+                <button className="text-xs text-red-600 hover:underline tap" onClick={() => remove(h.id)}>Supprimer</button>
               )}
             </div>
           </div>

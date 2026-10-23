@@ -76,7 +76,7 @@ function EspaceInner() {
             )}
           </div>
           <p className="text-center text-sm text-gray-500 mt-4">
-            <a href="/don" className="text-gold hover:underline">Faire un don</a>
+            <a href="/don" className="text-gold hover:underline tap">Faire un don</a>
           </p>
         </div>
       </div>
@@ -91,7 +91,7 @@ function EspaceInner() {
       title={`Chalom ${data.donor.firstName} ${data.donor.lastName}`}
       subtitle={name}
       aside={
-        <button onClick={logout} className="text-sm text-white/80 hover:text-white shrink-0">
+        <button onClick={logout} className="tap text-sm text-white/80 hover:text-white shrink-0">
           Déconnexion
         </button>
       }
@@ -139,13 +139,13 @@ function EspaceInner() {
             <Empty>{data.donor.hasAddress ? "Aucun reçu pour l'instant." : "Aucun reçu : communiquez votre adresse postale à la synagogue pour en recevoir."}</Empty>
           )}
           {data.receipts.map((r: any) => (
-            <div key={r.id} className="p-4 flex items-center justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate">
+            <div key={r.id} className="p-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
+              <span className="min-w-0">
                 N° {r.number} · {r.kind === "annuel" ? `récapitulatif ${r.year}` : formatDate(r.issuedAt)}
               </span>
               <span className="flex items-center gap-3 shrink-0">
                 <span className="font-semibold">{formatEUR(r.amount)}</span>
-                <a href={`/api/espace/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold hover:underline">
+                <a href={`/api/espace/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold hover:underline tap">
                   Télécharger
                 </a>
               </span>

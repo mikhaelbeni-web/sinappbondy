@@ -68,3 +68,40 @@ h1 {
 .page-subtitle {
   @apply text-xs text-gray-500 mt-0.5;
 }
+
+/* Zone qui défile sans barre visible (menu latéral) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Écrans tactiles (téléphone, tablette) : cibles d'au moins 44 px de haut.
+   Sans effet à la souris, la mise en page ordinateur ne change pas. */
+@media (pointer: coarse) {
+  .btn,
+  .chip,
+  .input,
+  .tap {
+    min-height: 44px;
+  }
+  .tap {
+    min-width: 44px;
+  }
+  /* 16 px : en dessous, Safari iOS (iPhone et iPad) zoome sur le champ au focus. */
+  .input {
+    font-size: 16px;
+  }
+  a.tap {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Hauteur d'écran sur mobile : 100dvh suit la barre d'adresse qui se
+   replie ; 100vh reste en repli pour les navigateurs plus anciens. */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}

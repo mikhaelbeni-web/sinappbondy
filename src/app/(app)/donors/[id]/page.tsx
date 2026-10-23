@@ -176,7 +176,7 @@ export default function DonorDetailPage() {
             <label className="label">Formule de cotisation</label>
             <input className="input" placeholder="ex : Famille" value={form.membershipTier || ""} onChange={(e) => setForm({ ...form, membershipTier: e.target.value })} />
           </div>
-          <label className="sm:col-span-2 flex items-center gap-2 text-sm">
+          <label className="sm:col-span-2 tap flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!form.emailOptOut} onChange={(e) => setForm({ ...form, emailOptOut: e.target.checked })} />
             Ne reçoit pas les messages groupés (désinscrit)
           </label>
@@ -313,14 +313,14 @@ export default function DonorDetailPage() {
           </div>
           <div className="divide-y">
             {receipts.map((r) => (
-              <div key={r.id} className={`p-4 flex items-center justify-between gap-3 text-sm ${r.cancelled ? "opacity-60" : ""}`}>
-                <span className="min-w-0 truncate">
+              <div key={r.id} className={`p-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm ${r.cancelled ? "opacity-60" : ""}`}>
+                <span className="min-w-0">
                   N° {r.number} · {r.kind === "annuel" ? `récapitulatif ${r.year}` : formatDate(r.periodStart)}
                   {r.cancelled && " · annulé"}
                 </span>
                 <span className="flex items-center gap-3 shrink-0">
                   <span className="font-semibold">{formatEUR(r.amount)}</span>
-                  <a href={`/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold text-xs hover:underline">
+                  <a href={`/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gold text-xs hover:underline tap">
                     PDF
                   </a>
                 </span>

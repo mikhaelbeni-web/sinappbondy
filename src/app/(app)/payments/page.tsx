@@ -134,7 +134,7 @@ export default function PaymentsPage() {
         {visible.map((p) => (
           <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
             <div className="min-w-0">
-              <Link href={`/donors/${p.donorId}`} className="font-medium text-ink hover:underline">
+              <Link href={`/donors/${p.donorId}`} className="font-medium text-ink hover:underline tap">
                 {p.donorName}
               </Link>
               <p className="text-gray-500">
@@ -148,7 +148,7 @@ export default function PaymentsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3 shrink-0">
               <span className="font-semibold text-green-700">{formatEUR(p.amount)}</span>
-              <button onClick={() => remove(p.id)} className="text-xs text-red-600 hover:underline">
+              <button onClick={() => remove(p.id)} className="text-xs text-red-600 hover:underline tap">
                 Supprimer
               </button>
             </div>

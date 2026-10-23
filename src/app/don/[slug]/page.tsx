@@ -27,7 +27,7 @@ export default function CampaignPage() {
       <div className="min-h-screen flex items-center justify-center bg-cream px-4">
         <div className="card p-8 max-w-md text-center">
           <p className="text-gray-600">{error}</p>
-          <a href="/don" className="text-gold hover:underline mt-3 inline-block">Faire un don à la synagogue</a>
+          <a href="/don" className="text-gold hover:underline mt-3 inline-block tap">Faire un don à la synagogue</a>
         </div>
       </div>
     );

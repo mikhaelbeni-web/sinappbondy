@@ -103,7 +103,7 @@ export default function Combobox({
         aria-activedescendant={open && shown[active] ? `${listId}-${active}` : undefined}
         autoComplete="off"
         required={required}
-        className="input pr-14"
+        className="input pr-14 [@media(pointer:coarse)]:pr-24"
         placeholder={open ? "Tapez pour filtrer…" : placeholder}
         value={open ? query : selectedText}
         onFocus={openList}
@@ -123,7 +123,7 @@ export default function Combobox({
           <button
             type="button"
             aria-label="Effacer"
-            className="p-1 hover:text-ink"
+            className="tap grid place-items-center p-1 hover:text-ink"
             onClick={() => onChange("")}
           >
             <X size={14} />
@@ -133,7 +133,7 @@ export default function Combobox({
           type="button"
           tabIndex={-1}
           aria-label={open ? "Fermer la liste" : "Ouvrir la liste"}
-          className="p-1 hover:text-ink"
+          className="tap grid place-items-center p-1 hover:text-ink"
           // mousedown évite que le champ perde le focus avant le clic.
           onMouseDown={(e) => {
             e.preventDefault();
@@ -158,7 +158,7 @@ export default function Combobox({
               id={`${listId}-${i}`}
               role="option"
               aria-selected={o.value === value}
-              className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-2.5 text-sm ${
+              className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-3 text-sm ${
                 i === active ? "bg-cream" : ""
               } ${o.value === value ? "font-semibold text-ink" : "text-gray-800"} ${!o.value ? "text-gray-500" : ""}`}
               onMouseEnter={() => setActive(i)}
