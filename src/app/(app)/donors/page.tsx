@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { filterByQuery } from "@/lib/search";
 
 interface Donor {
   id: string;
@@ -56,9 +57,7 @@ export default function DonorsPage() {
     }
   }
 
-  const filtered = donors.filter((d) =>
-    `${d.firstName} ${d.lastName} ${d.email}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = filterByQuery(donors, search, (d) => `${d.firstName} ${d.lastName} ${d.email}`);
 
   return (
     <div className="space-y-6">

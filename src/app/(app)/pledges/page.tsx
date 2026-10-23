@@ -4,6 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatEUR, formatDate, paidOf, remainingOf } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
+import Combobox from "@/components/Combobox";
+import { filterByQuery } from "@/lib/search";
 import { useAuth } from "@/context/AuthContext";
 
 interface Donor { id: string; firstName: string; lastName: string; email: string; }
@@ -36,6 +38,7 @@ function PledgesPageInner() {
   const [notes, setNotes] = useState("");
 
   const [donorQuery, setDonorQuery] = useState("");
+  const [donorFocus, setDonorFocus] = useState(false);
   const [showQuickDonor, setShowQuickDonor] = useState(false);
   const [quickDonor, setQuickDonor] = useState({ firstName: "", lastName: "", email: "", phone: "" });
 
@@ -68,9 +71,7 @@ function PledgesPageInner() {
   }, []);
 
   const filteredDonors = useMemo(() => {
-    if (!donorQuery) return donors.slice(0, 8);
-    const q = donorQuery.toLowerCase();
-    return donors.filter((d) => `${d.firstName} ${d.lastName}`.toLowerCase().includes(q)).slice(0, 8);
+    return filterByQuery(donors, donorQuery, (d) => `${d.firstName} ${d.lastName}`).slice(0, 50);
   }, [donors, donorQuery]);
 
   async function createQuickDonor() {
@@ -172,14 +173,13 @@ function PledgesPageInner() {
 
         <div>
           <label className="label">Office</label>
-          <select required className="input" value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
-            <option value="">— Choisir un office —</option>
-            {services.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label} ({formatDate(s.date)})
-              </option>
-            ))}
-          </select>
+          <Combobox
+            required
+            value={serviceId}
+            onChange={setServiceId}
+            placeholder="— Choisir un office —"
+            options={services.map((s) => ({ value: s.id, label: s.label, hint: formatDate(s.date) }))}
+          />
         </div>
 
         <div className="relative">
@@ -187,14 +187,20 @@ function PledgesPageInner() {
           <input
             className="input"
             placeholder="Rechercher un fidèle par nom…"
-            value={donorId ? donorQuery : donorQuery}
+            autoComplete="off"
+            value={donorQuery}
+            onFocus={() => setDonorFocus(true)}
+            onBlur={() => setDonorFocus(false)}
             onChange={(e) => {
               setDonorQuery(e.target.value);
               setDonorId("");
             }}
           />
-          {donorQuery && !donorId && (
-            <div className="absolute z-10 bg-white border border-gray-200 rounded-md shadow-md w-full mt-1 max-h-56 overflow-auto">
+          {(donorQuery || donorFocus) && !donorId && (
+            <div
+              className="absolute z-10 bg-white border border-gray-200 rounded-md shadow-md w-full mt-1 max-h-56 overflow-auto"
+              onMouseDown={(e) => e.preventDefault()}
+            >
               {filteredDonors.map((d) => (
                 <button
                   type="button"
@@ -237,12 +243,13 @@ function PledgesPageInner() {
 
         <div>
           <label className="label">Poste vendu pendant l'office</label>
-          <select className="input" value={catalogItemId} onChange={(e) => setCatalogItemId(e.target.value)}>
-            <option value="">— Autre / saisie libre —</option>
-            {catalog.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <Combobox
+            value={catalogItemId}
+            onChange={setCatalogItemId}
+            placeholder="— Autre / saisie libre —"
+            emptyLabel="— Autre / saisie libre —"
+            options={catalog.map((c) => ({ value: c.id, label: c.name }))}
+          />
           {!catalogItemId && (
             <input
               className="input mt-2"
