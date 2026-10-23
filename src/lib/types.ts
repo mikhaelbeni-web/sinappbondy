@@ -143,8 +143,35 @@ export interface ReceiptDoc {
   issuedAt: string;
   issuedBy: string;
   emailedAt: string | null;
+  // Remis au fidèle hors e-mail (main propre, téléchargement espace fidèle).
+  deliveredAt?: string | null;
+  deliveredVia?: "main_propre" | "espace" | null;
   cancelled: boolean;
   cancelledAt: string | null;
+  cancelledBy?: string | null;
+  cancelReason?: string | null;
+  // Chaînage annulation / remplacement.
+  replacesId?: string | null;
+  replacesNumber?: string | null;
+  replacedById?: string | null;
+  replacedByNumber?: string | null;
+  updatedAt?: string | null;
+}
+
+// Journal des actions sur les reçus fiscaux (modification, suppression,
+// annulation, remplacement, remise).
+export interface ReceiptAuditDoc {
+  id: string;
+  at: string;
+  by: string;
+  byUid: string;
+  action: "modification" | "suppression" | "annulation" | "remplacement" | "remise";
+  receiptId: string;
+  number: string;
+  year: number;
+  reason: string;
+  before: Record<string, any> | null;
+  after: Record<string, any> | null;
 }
 
 export interface SessionUser {

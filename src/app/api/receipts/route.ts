@@ -3,7 +3,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { missingAssociationFields } from "@/lib/association";
 import { getAssociation } from "@/lib/associationServer";
-import { emailReceipt, issueReceipt, pendingByDonor } from "@/lib/receipts";
+import { emailReceipt, issueReceipt, missingNumbers, pendingByDonor } from "@/lib/receipts";
 
 // Liste des reçus d'une année + paiements encore sans reçu.
 export async function GET(req: NextRequest) {
@@ -16,7 +16,12 @@ export async function GET(req: NextRequest) {
       getAssociation(),
     ]);
     const receipts = snap.docs.map((d) => d.data() as any).sort((a, b) => (a.number < b.number ? 1 : -1));
-    return NextResponse.json({ receipts, pending, missing: missingAssociationFields(association) });
+    return NextResponse.json({
+      receipts,
+      pending,
+      missing: missingAssociationFields(association),
+      missingNumbers: missingNumbers(receipts, year),
+    });
   } catch (err) {
     return handleApiError(err);
   }

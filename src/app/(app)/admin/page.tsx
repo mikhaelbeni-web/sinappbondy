@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { ASSOCIATION_CATEGORIES } from "@/lib/association";
+import { formatEUR, formatDate } from "@/lib/format";
 
-type Tab = "postes" | "equipe" | "association" | "relances" | "paiements" | "louah";
+type Tab = "postes" | "equipe" | "association" | "journal" | "relances" | "paiements" | "louah";
 
 export default function AdminPage() {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const isAdmin = !!user?.role?.isAdmin;
   const [tab, setTab] = useState<Tab>(
     can("gerer_postes") ? "postes" : can("gerer_paiements") ? "association" : can("envoyer_relances") ? "relances" : "louah"
   );
@@ -21,6 +23,7 @@ export default function AdminPage() {
     { key: "postes", label: "Postes & autorisations", show: can("gerer_postes") },
     { key: "equipe", label: "Équipe", show: can("gerer_equipe") },
     { key: "association", label: "Association & reçus fiscaux", show: can("gerer_paiements") },
+    { key: "journal", label: "Journal des reçus", show: isAdmin },
     { key: "relances", label: "Relances automatiques", show: can("envoyer_relances") },
     { key: "paiements", label: "Paiements", show: can("gerer_paiements") },
     { key: "louah", label: "Écran louah", show: can("gerer_offices") },
@@ -46,6 +49,7 @@ export default function AdminPage() {
       {tab === "postes" && can("gerer_postes") && <RolesTab />}
       {tab === "equipe" && can("gerer_equipe") && <TeamTab />}
       {tab === "association" && can("gerer_paiements") && <AssociationTab />}
+      {tab === "journal" && isAdmin && <ReceiptAuditTab />}
       {tab === "relances" && can("envoyer_relances") && <RemindersTab />}
       {tab === "paiements" && can("gerer_paiements") && <PaymentsTab />}
       {tab === "louah" && can("gerer_offices") && <LouahTab />}
@@ -727,6 +731,88 @@ function LouahTab() {
       </div>
       {message && <p className="text-sm text-gray-700">{message}</p>}
       <button className="btn-primary" disabled={saving} onClick={save}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
+    </div>
+  );
+}
+
+const AUDIT_LABELS: Record<string, string> = {
+  modification: "Modification",
+  suppression: "Suppression",
+  annulation: "Annulation",
+  remplacement: "Remplacement",
+  remise: "Remise",
+};
+
+function describeAudit(e: any): string {
+  const b = e.before || {};
+  const a = e.after || {};
+  if (e.action === "suppression") return `${b.donorName} · ${formatEUR(b.amount)}`;
+  if (e.action === "remplacement") {
+    return `remplacé par n° ${a.number} (${a.donorName}, ${formatEUR(a.amount)})`;
+  }
+  if (e.action === "modification") {
+    const parts: string[] = [];
+    if (b.number !== a.number) parts.push(`numéro ${b.number} → ${a.number}`);
+    if (b.donorId !== a.donorId) parts.push(`fidèle ${b.donorName} → ${a.donorName}`);
+    if (b.amount !== a.amount) parts.push(`montant ${formatEUR(b.amount)} → ${formatEUR(a.amount)}`);
+    if (String(b.issuedAt).slice(0, 10) !== String(a.issuedAt).slice(0, 10)) {
+      parts.push(`date ${formatDate(b.issuedAt)} → ${formatDate(a.issuedAt)}`);
+    }
+    return parts.join(", ");
+  }
+  return b.donorName ? `${b.donorName} · ${formatEUR(b.amount)}` : "";
+}
+
+function ReceiptAuditTab() {
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+    fetch(`/api/receipts/audit?year=${year}`)
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error);
+        setEntries(d.entries || []);
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [year]);
+
+  return (
+    <div className="card">
+      <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-ink">Journal des reçus fiscaux</h2>
+          <p className="text-xs text-gray-500">Chaque modification, suppression, annulation, remplacement ou remise : qui, quand, avant/après et motif.</p>
+        </div>
+        <select className="input w-full sm:w-32" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+      </div>
+      <div className="divide-y">
+        {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
+        {error && <p className="p-4 text-sm text-red-600">{error}</p>}
+        {!loading && !error && entries.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune action enregistrée pour {year}.</p>}
+        {entries.map((e) => (
+          <div key={e.id} className="p-4 text-sm">
+            <p className="font-medium text-ink">
+              {AUDIT_LABELS[e.action] || e.action} · n° {e.number}
+            </p>
+            <p className="text-gray-600 break-words">{describeAudit(e)}</p>
+            <p className="text-xs text-gray-500">
+              {new Date(e.at).toLocaleString("fr-FR")} · {e.by}
+              {e.reason ? ` · motif : ${e.reason}` : ""}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
