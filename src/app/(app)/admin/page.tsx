@@ -346,6 +346,10 @@ function PaymentsTab() {
       )}
       {status?.error && <p className="text-sm text-red-600 break-words">{status.error}</p>}
       <p className="text-sm text-gray-600 break-all">Adresse de l&apos;appli (NEXT_PUBLIC_APP_URL) : {status?.appUrl || "manquante"}</p>
+      <p className="text-sm text-gray-600 break-all">
+        Serveur HelloAsso utilisé : {status?.apiHost}
+        {status?.apiUrlVar === null ? " (HELLOASSO_API_URL absente : production par défaut)" : ` (HELLOASSO_API_URL = « ${status?.apiUrlVar} »)`}
+      </p>
       <div className="pt-2 border-t space-y-2">
         <button type="button" className="btn-secondary" disabled={testing} onClick={runTest}>
           {testing ? "Test en cours…" : "Tester un paiement de 1 €"}

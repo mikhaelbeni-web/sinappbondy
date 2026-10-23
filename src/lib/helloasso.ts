@@ -24,6 +24,10 @@ function orgSlug(): string {
   return slug;
 }
 
+export function helloAssoApiHost(): string {
+  return apiHost();
+}
+
 export function isHelloAssoSandbox(): boolean {
   return apiHost().includes("sandbox");
 }
@@ -64,7 +68,9 @@ async function accessToken(): Promise<string> {
   if (!next) {
     next = await requestToken({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
   }
-  if (!next) throw new Error(`HelloAsso refuse l'identification (vérifier l'identifiant et le secret du client API) : ${lastTokenError}`);
+  if (!next) throw new Error(
+      `HelloAsso refuse l'identification sur ${apiHost()} (vérifier l'identifiant et le secret du client API, et HELLOASSO_API_URL) : ${lastTokenError}`,
+    );
   token = next;
   return token.access;
 }

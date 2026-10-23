@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withPermission, handleApiError } from "@/lib/apiHelpers";
-import { getHelloAssoOrganization, isHelloAssoSandbox, testHelloAssoCheckout } from "@/lib/helloasso";
+import { getHelloAssoOrganization, helloAssoApiHost, isHelloAssoSandbox, testHelloAssoCheckout } from "@/lib/helloasso";
 
 // État de la configuration HelloAsso, pour l'écran Admin > Paiements.
 export async function GET() {
@@ -28,6 +28,8 @@ export async function GET() {
       organizationName,
       sandbox: isHelloAssoSandbox(),
       appUrl: process.env.NEXT_PUBLIC_APP_URL || null,
+      apiHost: helloAssoApiHost(),
+      apiUrlVar: process.env.HELLOASSO_API_URL ?? null,
       error,
       webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/helloasso/webhook`,
     });
