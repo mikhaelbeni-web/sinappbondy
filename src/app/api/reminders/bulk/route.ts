@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         // Lien signé : le montant (reste dû) est recalculé au moment du clic.
         const link = payUrl({ kind: "pledge", id: pledge.id });
 
-        await sendReminderEmail({
+        const sent = await sendReminderEmail({
           to: pledge.donorEmail,
           donorName: pledge.donorName,
           amount: remainingOf(pledge),
@@ -45,6 +45,10 @@ export async function POST(req: NextRequest) {
           serviceLabel: pledge.serviceLabel,
           payUrl: link,
         });
+        if (!sent.sent) {
+          results.push({ id: d.id, ok: false, error: sent.reason });
+          continue;
+        }
 
         const now = new Date().toISOString();
         await d.ref.update({
