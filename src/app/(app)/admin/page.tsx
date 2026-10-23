@@ -741,12 +741,19 @@ const AUDIT_LABELS: Record<string, string> = {
   annulation: "Annulation",
   remplacement: "Remplacement",
   remise: "Remise",
+  marquage_test: "Marquage test",
+  remise_a_zero: "Remise à zéro (tests)",
 };
 
 function describeAudit(e: any): string {
   const b = e.before || {};
   const a = e.after || {};
   if (e.action === "suppression") return `${b.donorName} · ${formatEUR(b.amount)}`;
+  if (e.action === "remise_a_zero") {
+    const ext = (b.external || []).map((x: any) => `${x.number} ${x.why}`).join(", ");
+    return `${(b.numbers || []).length} reçu(s) de test supprimé(s), compteur remis à 0${ext ? ` · sortis : ${ext}` : ""}`;
+  }
+  if (e.action === "marquage_test") return `${b.donorName} · ${formatEUR(b.amount)} · ${a.test ? "marqué test" : "marque test retirée"}`;
   if (e.action === "remplacement") {
     return `remplacé par n° ${a.number} (${a.donorName}, ${formatEUR(a.amount)})`;
   }
@@ -769,6 +776,7 @@ function ReceiptAuditTab() {
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -781,9 +789,11 @@ function ReceiptAuditTab() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [year]);
+  }, [year, refresh]);
 
   return (
+    <div className="space-y-6">
+    <TestResetCard onChange={() => setRefresh((n) => n + 1)} />
     <div className="card">
       <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -813,6 +823,159 @@ function ReceiptAuditTab() {
           </div>
         ))}
       </div>
+    </div>
+    </div>
+  );
+}
+
+const RESET_TEXT = "REMISE A ZERO";
+
+// Reçus de test de l'année en cours : marquage un par un, puis remise à zéro
+// de la numérotation si et seulement si tous les reçus sont des tests.
+function TestResetCard({ onChange }: { onChange: () => void }) {
+  const year = new Date().getFullYear();
+  const [data, setData] = useState<{ counter: number; items: any[]; allTest: boolean } | null>(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [externalNote, setExternalNote] = useState("");
+
+  async function load() {
+    setError("");
+    try {
+      const r = await fetch(`/api/receipts/reset?year=${year}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setData(d);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function toggle(item: any) {
+    setBusy(item.id);
+    setMessage("");
+    try {
+      const r = await fetch(`/api/receipts/${item.id}/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: !item.test }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      await load();
+      onChange();
+    } catch (e: any) {
+      setMessage(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reset() {
+    if (!data) return;
+    const numbers = data.items.map((i) => i.number).join(", ");
+    if (!confirm(`Supprimer définitivement les reçus ${numbers} et repartir du n° ${year}/00001 ? Cette action est irréversible.`)) return;
+    setBusy("reset");
+    setMessage("");
+    try {
+      const r = await fetch("/api/receipts/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year, confirmText, externalNote }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setMessage(`Numérotation ${year} remise à zéro : ${d.deleted.length} reçu(s) de test supprimé(s). Le prochain reçu portera le n° ${year}/00001.`);
+      setConfirmText("");
+      setExternalNote("");
+      await load();
+      onChange();
+    } catch (e: any) {
+      setMessage(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const items = data?.items || [];
+  const external = items.filter((i) => i.external);
+  const confirmOk = confirmText.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim() === RESET_TEXT;
+  const canReset = !!data?.allTest && confirmOk && (external.length === 0 || externalNote.trim().length >= 15);
+
+  return (
+    <div className="card">
+      <div className="p-4 border-b space-y-1">
+        <h2 className="font-semibold text-ink">Reçus de test {year} et remise à zéro</h2>
+        <p className="text-xs text-gray-500">
+          Si les premiers reçus de {year} étaient des essais, cochez « Reçu de test » sur chacun, puis remettez la numérotation à zéro.
+          C'est impossible dès qu'un seul reçu n'est pas marqué test : un vrai reçu ne doit jamais disparaître.
+        </p>
+      </div>
+      {error && <p className="p-4 text-sm text-red-600">{error}</p>}
+      {!data && !error && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
+      {data && items.length === 0 && (
+        <p className="p-4 text-sm text-gray-500">Aucun reçu en {year}. Le prochain reçu portera le n° {year}/{String(data.counter + 1).padStart(5, "0")}.</p>
+      )}
+      {items.length > 0 && (
+        <div className="divide-y">
+          {items.map((i) => (
+            <label key={i.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm tap cursor-pointer">
+              <span className="min-w-0">
+                <span className="font-medium text-ink">N° {i.number} · {i.donorName}</span>
+                <span className="block text-gray-500 break-words">
+                  {formatEUR(i.amount)} · {i.state === "brouillon" ? "brouillon" : i.state === "envoye" ? "envoyé" : "annulé"}
+                  {i.donorEmail ? ` · ${i.donorEmail}` : ""}
+                </span>
+                {i.external && <span className="block text-xs text-amber-700">Sorti de l'association : {i.external}</span>}
+              </span>
+              <span className="flex items-center gap-2 shrink-0">
+                <input type="checkbox" checked={i.test} disabled={!!busy} onChange={() => toggle(i)} />
+                Reçu de test
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+      {items.length > 0 && (
+        <div className="p-4 border-t space-y-3 text-sm">
+          {!data!.allTest ? (
+            <p className="text-gray-600">
+              Remise à zéro bloquée : {items.filter((i) => !i.test).map((i) => i.number).join(", ")} non marqué(s) « test ».
+            </p>
+          ) : (
+            <>
+              <p className="text-gray-700">
+                Les {items.length} reçu(s) ci-dessus seront supprimés définitivement, leurs paiements redeviendront « sans reçu » et le
+                prochain reçu portera le n° {year}/00001. L'opération est inscrite au journal ci-dessous.
+              </p>
+              {external.length > 0 && (
+                <label className="block">
+                  <span className="text-xs text-amber-800">
+                    {external.length} reçu(s) de test sont sortis de l'association. Expliquez par écrit pourquoi ils peuvent disparaître (ex.
+                    « adresse de test, aucun vrai donateur ») :
+                  </span>
+                  <textarea className="input w-full" rows={2} value={externalNote} onChange={(e) => setExternalNote(e.target.value)} />
+                </label>
+              )}
+              <label className="block">
+                <span className="text-xs text-gray-500">Saisissez {RESET_TEXT} pour confirmer</span>
+                <input className="input w-full" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
+              </label>
+              <button className="btn-secondary text-red-700" disabled={!!busy || !canReset} onClick={reset}>
+                {busy === "reset" ? "Remise à zéro…" : "Réinitialiser la numérotation des tests"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {message && <p className="px-4 pb-4 text-sm text-gray-700">{message}</p>}
     </div>
   );
 }

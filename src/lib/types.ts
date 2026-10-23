@@ -156,6 +156,11 @@ export interface ReceiptDoc {
   replacedById?: string | null;
   replacedByNumber?: string | null;
   updatedAt?: string | null;
+  // Marqué « reçu de test » par l'Administrateur : seul un exercice dont
+  // tous les reçus sont des tests peut être remis à zéro.
+  test?: boolean;
+  testMarkedAt?: string | null;
+  testMarkedBy?: string | null;
 }
 
 // Journal des actions sur les reçus fiscaux (modification, suppression,
@@ -165,7 +170,7 @@ export interface ReceiptAuditDoc {
   at: string;
   by: string;
   byUid: string;
-  action: "modification" | "suppression" | "annulation" | "remplacement" | "remise";
+  action: "modification" | "suppression" | "annulation" | "remplacement" | "remise" | "marquage_test" | "remise_a_zero";
   receiptId: string;
   number: string;
   year: number;

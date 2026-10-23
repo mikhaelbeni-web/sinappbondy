@@ -569,3 +569,192 @@ export async function pendingByDonor(year: number) {
   }
   return Array.from(groups.values()).sort((a, b) => a.donorName.localeCompare(b.donorName, "fr"));
 }
+
+// ---------------------------------------------------------------------------
+// Reçus de test et remise à zéro de la numérotation.
+//
+// Les premiers reçus d'une installation sont souvent des essais. L'exercice
+// en cours peut repartir du n° 1, à une seule condition : TOUS ses reçus ont
+// été marqués « test » un par un par l'Administrateur. Dès qu'un reçu non
+// marqué existe, la remise à zéro est impossible. Un reçu de test parti chez
+// un destinataire extérieur (e-mail autre que ceux de l'association ou d'un
+// Administrateur, ou remis / téléchargé par un fidèle) exige en plus une
+// explication écrite, conservée au journal.
+// ---------------------------------------------------------------------------
+
+export const RESET_CONFIRM_TEXT = "REMISE A ZERO";
+
+function normalizeConfirm(s: unknown): string {
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function emailOf(s: string | undefined | null): string {
+  const m = /<([^>]+)>/.exec(s || "");
+  return (m ? m[1] : s || "").trim().toLowerCase();
+}
+
+// Adresses « maison » : expéditeur des e-mails et membres au poste Administrateur.
+async function internalEmails(actor: Actor & { email?: string }): Promise<Set<string>> {
+  const db = adminDb();
+  const out = new Set<string>();
+  for (const e of [actor.email, process.env.GMAIL_USER, process.env.EMAIL_FROM]) {
+    const v = emailOf(e);
+    if (v) out.add(v);
+  }
+  const [rolesSnap, teamSnap] = await Promise.all([db.collection("roles").get(), db.collection("team").get()]);
+  const adminRoles = new Set(rolesSnap.docs.filter((d) => (d.data() as any).isAdmin).map((d) => d.id));
+  for (const d of teamSnap.docs) {
+    const m = d.data() as any;
+    if (adminRoles.has(m.roleId) && m.email) out.add(emailOf(m.email));
+  }
+  return out;
+}
+
+// Pourquoi ce reçu est sorti chez un destinataire extérieur (null sinon).
+function externalExit(r: ReceiptDoc, internal: Set<string>): string | null {
+  const email = emailOf(r.donor.email);
+  if (r.emailedAt && email && !internal.has(email)) return `envoyé par e-mail à ${r.donor.email}`;
+  if (r.deliveredVia === "espace") return "téléchargé par le fidèle depuis son espace";
+  if (r.deliveredVia === "main_propre") return "marqué remis en main propre";
+  return null;
+}
+
+export interface ResetPreviewItem {
+  id: string;
+  number: string;
+  donorName: string;
+  donorEmail: string;
+  amount: number;
+  state: ReceiptState;
+  test: boolean;
+  external: string | null;
+}
+
+export async function resetPreview(year: number, actor: Actor & { email?: string }) {
+  const [snap, internal, counterSnap] = await Promise.all([
+    adminDb().collection("receipts").where("year", "==", year).get(),
+    internalEmails(actor),
+    adminDb().collection("settings").doc(`receiptCounter_${year}`).get(),
+  ]);
+  const items: ResetPreviewItem[] = snap.docs
+    .map((d) => d.data() as ReceiptDoc)
+    .sort((a, b) => (a.number < b.number ? -1 : 1))
+    .map((r) => ({
+      id: r.id,
+      number: r.number,
+      donorName: r.donor.name,
+      donorEmail: r.donor.email,
+      amount: r.amount,
+      state: receiptState(r),
+      test: !!r.test,
+      external: externalExit(r, internal),
+    }));
+  return {
+    year,
+    counter: (counterSnap.exists ? (counterSnap.data() as any).last : 0) || 0,
+    items,
+    allTest: items.length > 0 && items.every((i) => i.test),
+  };
+}
+
+export async function markReceiptTest(receiptId: string, test: boolean, actor: Actor): Promise<void> {
+  const db = adminDb();
+  const ref = db.collection("receipts").doc(receiptId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw httpError("Reçu introuvable.", 404);
+    const r = snap.data() as ReceiptDoc;
+    if (!!r.test === test) return;
+    const now = new Date().toISOString();
+    tx.update(ref, { test, testMarkedAt: test ? now : null, testMarkedBy: test ? actor.name : null });
+    writeAudit(
+      tx,
+      {
+        action: "marquage_test",
+        receiptId: r.id,
+        number: r.number,
+        year: r.year,
+        reason: test ? "Marqué reçu de test" : "Marque « test » retirée",
+        before: { ...auditSnapshot(r), test: !!r.test },
+        after: { ...auditSnapshot(r), test },
+      },
+      actor
+    );
+  });
+}
+
+// Supprime tous les reçus (de test) de l'exercice en cours, libère leurs
+// paiements et remet le compteur à zéro, en une seule transaction.
+export async function resetTestNumbering(
+  params: { year: number; confirmText: unknown; externalNote?: unknown },
+  actor: Actor & { email?: string }
+): Promise<{ deleted: string[] }> {
+  const currentYear = new Date().getFullYear();
+  if (params.year !== currentYear) throw httpError(`Seule la numérotation de l'année en cours (${currentYear}) peut être remise à zéro.`);
+  if (normalizeConfirm(params.confirmText) !== RESET_CONFIRM_TEXT) {
+    throw httpError(`Saisissez « ${RESET_CONFIRM_TEXT} » pour confirmer.`);
+  }
+  const note = typeof params.externalNote === "string" ? params.externalNote.trim() : "";
+  const internal = await internalEmails(actor);
+  const db = adminDb();
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(db.collection("receipts").where("year", "==", params.year));
+    const receipts = snap.docs.map((d) => d.data() as ReceiptDoc);
+    if (!receipts.length) throw httpError(`Aucun reçu en ${params.year} : rien à remettre à zéro.`);
+    if (receipts.length > 100) throw httpError("Trop de reçus pour une remise à zéro de tests.");
+    const notTest = receipts.filter((r) => !r.test).map((r) => r.number).sort();
+    if (notTest.length) {
+      throw httpError(
+        `Remise à zéro impossible : ${notTest.length} reçu(s) ne sont pas marqués « test » (${notTest.join(", ")}). Un vrai reçu ne peut jamais être effacé.`,
+        409
+      );
+    }
+    const external = receipts
+      .map((r) => ({ r, why: externalExit(r, internal) }))
+      .filter((x) => x.why);
+    if (external.length && note.length < 15) {
+      throw httpError(
+        `Ces reçus de test sont sortis de l'association : ${external.map((x) => `${x.r.number} (${x.why})`).join(", ")}. ` +
+          "Expliquez par écrit pourquoi ils peuvent disparaître (ex. destinataire prévenu, adresse de test).",
+        409,
+        "externe"
+      );
+    }
+
+    const paymentIds = Array.from(new Set(receipts.flatMap((r) => r.payments.map((p) => p.id))));
+    const paySnaps = paymentIds.length ? await tx.getAll(...paymentIds.map((id) => db.collection("payments").doc(id))) : [];
+    const ids = new Set(receipts.map((r) => r.id));
+
+    for (const s of paySnaps) {
+      if (s.exists && ids.has((s.data() as any).receiptId)) tx.update(s.ref, { receiptId: null });
+    }
+    for (const d of snap.docs) tx.delete(d.ref);
+    tx.set(db.collection("settings").doc(`receiptCounter_${params.year}`), { last: 0 }, { merge: true });
+
+    const numbers = receipts.map((r) => r.number).sort();
+    writeAudit(
+      tx,
+      {
+        action: "remise_a_zero",
+        receiptId: "",
+        number: numbers.join(", "),
+        year: params.year,
+        reason: note ? `Reçus de test supprimés. Sortis de l'association : ${note}` : "Reçus de test supprimés",
+        before: {
+          numbers,
+          external: external.map((x) => ({ number: x.r.number, why: x.why })),
+          receipts,
+        },
+        after: { counter: 0 },
+      },
+      actor
+    );
+    return { deleted: numbers };
+  });
+}
