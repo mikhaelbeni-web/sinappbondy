@@ -390,12 +390,55 @@ const ASSOCIATION_FIELDS: { key: string; label: string; placeholder?: string; wi
   { key: "signatoryTitle", label: "Qualité du signataire", placeholder: "ex : Président" },
 ];
 
+// Réduit l'image (photo de téléphone, scan…) pour tenir sous la limite
+// stockée avec la fiche : 900 px de côté au plus, PNG si la transparence
+// tient, sinon JPEG sur fond blanc.
+const IMAGE_MAX_CHARS = 380_000;
+async function compressImage(file: File): Promise<string> {
+  if (!/^image\/(png|jpeg)$/.test(file.type)) throw new Error("Image PNG ou JPEG attendue.");
+  const src = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Image illisible."));
+    reader.readAsDataURL(file);
+  });
+  if (src.length <= IMAGE_MAX_CHARS) return src;
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Image illisible."));
+    i.src = src;
+  });
+  for (const maxSide of [900, 700, 500, 350]) {
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext("2d")!;
+    if (file.type === "image/png") {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const png = canvas.toDataURL("image/png");
+      if (png.length <= IMAGE_MAX_CHARS) return png;
+    }
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    for (const q of [0.85, 0.7]) {
+      const jpg = canvas.toDataURL("image/jpeg", q);
+      if (jpg.length <= IMAGE_MAX_CHARS) return jpg;
+    }
+  }
+  throw new Error("Image trop lourde, même réduite : essayez un fichier plus simple.");
+}
+
 function AssociationTab() {
   const [form, setForm] = useState<any>(null);
   const [missing, setMissing] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [imageBusy, setImageBusy] = useState("");
+  const [imageNote, setImageNote] = useState<{ key: string; text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     fetch("/api/association")
@@ -406,15 +449,40 @@ function AssociationTab() {
       });
   }, []);
 
-  function onImage(key: "signatureImage" | "logoImage", file: File | undefined) {
-    if (!file) return;
-    if (file.size > 300_000) {
-      setError("Image trop lourde (300 Ko maximum).");
-      return;
+  // Le logo et la signature sont enregistrés dès qu'on les choisit ou les
+  // retire : ils sont repris tout de suite par les reçus, sans attendre le
+  // bouton « Enregistrer la fiche » (et même si des reçus ont été émis).
+  async function saveImage(key: "signatureImage" | "logoImage", value: string) {
+    const label = key === "logoImage" ? "Logo" : "Signature";
+    setImageBusy(key);
+    setImageNote(null);
+    try {
+      const res = await fetch("/api/association", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // On ne reprend que l'image : les autres champs en cours de saisie restent.
+      setForm((f: any) => ({ ...f, [key]: data.association[key] }));
+      setImageNote({ key, ok: true, text: value ? `${label} enregistré(e) : utilisé(e) dès maintenant sur les reçus.` : `${label} retiré(e) des reçus.` });
+    } catch (err: any) {
+      setImageNote({ key, ok: false, text: err.message || `${label} non enregistré(e).` });
+    } finally {
+      setImageBusy("");
     }
-    const reader = new FileReader();
-    reader.onload = () => setForm((f: any) => ({ ...f, [key]: String(reader.result) }));
-    reader.readAsDataURL(file);
+  }
+
+  async function onImage(key: "signatureImage" | "logoImage", input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = ""; // permet de choisir à nouveau le même fichier
+    if (!file) return;
+    try {
+      await saveImage(key, await compressImage(file));
+    } catch (err: any) {
+      setImageNote({ key, ok: false, text: err.message });
+    }
   }
 
   async function save(e: React.FormEvent) {
@@ -491,19 +559,24 @@ function AssociationTab() {
           <div key={key} className="sm:col-span-2">
             <label className="label">{label}</label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <input type="file" accept="image/png,image/jpeg" onChange={(e) => onImage(key, e.target.files?.[0])} className="tap text-sm" />
-              {form[key] && (
+              <input type="file" accept="image/png,image/jpeg" disabled={!!imageBusy} onChange={(e) => onImage(key, e.target)} className="tap text-sm" />
+              {imageBusy === key && <span className="text-xs text-gray-500">Enregistrement…</span>}
+              {form[key] && imageBusy !== key && (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={form[key]} alt={label} className="h-12 border rounded bg-white" />
-                  <button type="button" className="text-xs text-red-600 hover:underline tap" onClick={() => setForm({ ...form, [key]: "" })}>
+                  <button type="button" className="text-xs text-red-600 hover:underline tap" disabled={!!imageBusy} onClick={() => saveImage(key, "")}>
                     Retirer
                   </button>
                 </>
               )}
             </div>
+            {imageNote?.key === key && <p className={`text-xs mt-1 ${imageNote.ok ? "text-green-700" : "text-red-600"}`}>{imageNote.text}</p>}
           </div>
         ))}
+        <p className="sm:col-span-2 text-xs text-gray-500 -mt-1">
+          Logo et signature sont enregistrés dès que vous choisissez le fichier, et restent modifiables à tout moment, même après l'émission de reçus.
+        </p>
         <label className="sm:col-span-2 tap flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-1" checked={!!form.autoReceipt} onChange={(e) => setForm({ ...form, autoReceipt: e.target.checked })} />
           <span>Envoyer automatiquement un reçu fiscal à chaque paiement. Décochez pour n'émettre qu'un reçu récapitulatif annuel.</span>

@@ -40,7 +40,7 @@ export async function PUT(req: NextRequest) {
       const img = update[key];
       if (!img) continue;
       if (!/^data:image\/(png|jpe?g);base64,/.test(img)) return jsonError(`${label} : image PNG ou JPEG attendue.`, 400);
-      if (img.length > 400_000) return jsonError(`${label} trop lourd(e) (300 Ko maximum).`, 400);
+      if (img.length > 400_000) return jsonError(`${label} trop lourd(e) : choisissez une image plus légère.`, 400);
     }
     update.updatedAt = new Date().toISOString();
 

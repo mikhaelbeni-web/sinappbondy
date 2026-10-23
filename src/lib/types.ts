@@ -127,7 +127,7 @@ export interface ReceiptDoc {
   payments: { id: string; date: string; amount: number; method: PaymentMethod }[];
   periodStart: string; // yyyy-mm-dd (= date du don pour un reçu unitaire)
   periodEnd: string;
-  // Copie de la fiche association au moment de l'émission (hors signature).
+  // Copie de la fiche association au moment de l'émission (hors images).
   association: {
     legalName: string;
     address: string;
@@ -140,6 +140,9 @@ export interface ReceiptDoc {
     signatoryName: string;
     signatoryTitle: string;
   };
+  // Signature apposée à l'émission (collection receiptSignatures), absente
+  // sur les reçus émis avant l'archivage des signatures.
+  signatureId?: string | null;
   issuedAt: string;
   issuedBy: string;
   emailedAt: string | null;
