@@ -8,6 +8,7 @@ import Combobox from "@/components/Combobox";
 import Toast, { readJson, type Notice } from "@/components/Toast";
 import { filterByQuery } from "@/lib/search";
 import { useAuth } from "@/context/AuthContext";
+import { PledgeActionButtons, PledgeEditPanel, type PledgeMode } from "@/components/PledgeManage";
 
 interface Donor { id: string; firstName: string; lastName: string; email: string; }
 interface Service { id: string; label: string; date: string; }
@@ -51,6 +52,11 @@ function PledgesPageInner() {
   const [remindNotice, setRemindNotice] = useState<Notice | null>(null);
   const closeNotice = useCallback(() => setRemindNotice(null), []);
   const [statusFilter, setStatusFilter] = useState("");
+  const [open, setOpen] = useState<{ id: string; mode: PledgeMode } | null>(null);
+
+  function replacePledge(id: string, updated: any | null) {
+    setPledges((prev) => (updated ? prev.map((x) => (x.id === id ? updated : x)) : prev.filter((x) => x.id !== id)));
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -298,23 +304,41 @@ function PledgesPageInner() {
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
         {!loading && visiblePledges.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune promesse.</p>}
         {visiblePledges.map((p) => (
-          <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
-            <div className="min-w-0">
-              <p className="font-medium text-ink">{p.donorName} — {p.catalogItemName}</p>
-              <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)}</p>
-              {p.status === "partiel" && (
-                <p className="text-purple-700 text-xs">Réglé {formatEUR(paidOf(p))} · reste {formatEUR(remainingOf(p))}</p>
-              )}
+          <div key={p.id} className="p-4 text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-medium text-ink">{p.donorName} — {p.catalogItemName}</p>
+                <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)}</p>
+                {p.status === "partiel" && (
+                  <p className="text-purple-700 text-xs">Réglé {formatEUR(paidOf(p))} · reste {formatEUR(remainingOf(p))}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+                <span className="font-semibold">{formatEUR(p.amount)}</span>
+                <StatusBadge status={p.status} />
+                {can("envoyer_relances") && remainingOf(p) > 0 && (
+                  <button onClick={() => relancer(p.id, p.donorName)} disabled={remindingId === p.id} className="btn-secondary text-xs px-2 py-1">
+                    {remindingId === p.id ? "Envoi…" : "Relancer"}
+                  </button>
+                )}
+                <PledgeActionButtons
+                  pledge={p}
+                  onOpen={(mode) => setOpen({ id: p.id, mode })}
+                  onChanged={(u) => replacePledge(p.id, u)}
+                  onNotice={setRemindNotice}
+                />
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-              <span className="font-semibold">{formatEUR(p.amount)}</span>
-              <StatusBadge status={p.status} />
-              {can("envoyer_relances") && remainingOf(p) > 0 && (
-                <button onClick={() => relancer(p.id, p.donorName)} disabled={remindingId === p.id} className="btn-secondary text-xs px-2 py-1">
-                  {remindingId === p.id ? "Envoi…" : "Relancer"}
-                </button>
-              )}
-            </div>
+            {open && open.id === p.id && (
+              <PledgeEditPanel
+                key={open.mode}
+                pledge={p}
+                mode={open.mode}
+                onClose={() => setOpen(null)}
+                onChanged={(u) => replacePledge(p.id, u)}
+                onNotice={setRemindNotice}
+              />
+            )}
           </div>
         ))}
       </div>

@@ -8,6 +8,7 @@ import PaymentForm from "@/components/PaymentForm";
 import HazkarotSection from "@/components/HazkarotSection";
 import Toast, { readJson, type Notice } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
+import { PledgeActionButtons, PledgeEditPanel, type PledgeMode } from "@/components/PledgeManage";
 
 export default function DonorDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export default function DonorDetailPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [openPledge, setOpenPledge] = useState<{ id: string; mode: PledgeMode } | null>(null);
 
   // `quiet` : rafraîchit sans repasser par « Chargement… » (garde le défilement).
   async function load(quiet = false) {
@@ -252,28 +254,46 @@ export default function DonorDetailPage() {
             const reste = remainingOf(p);
             const regle = paidOf(p);
             return (
-              <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
-                <div className="min-w-0">
-                  <p className="font-medium text-ink">{p.catalogItemName}</p>
-                  <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)} · saisi par {p.createdByName}</p>
-                  {regle > 0 && reste > 0 && (
-                    <p className="text-purple-700 text-xs">Réglé {formatEUR(regle)} · reste {formatEUR(reste)}</p>
-                  )}
-                  {p.notes && <p className="text-gray-400 italic">{p.notes}</p>}
+              <div key={p.id} className="p-4 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-ink">{p.catalogItemName}</p>
+                    <p className="text-gray-500">{p.serviceLabel} · {formatDate(p.createdAt)} · saisi par {p.createdByName}</p>
+                    {regle > 0 && reste > 0 && (
+                      <p className="text-purple-700 text-xs">Réglé {formatEUR(regle)} · reste {formatEUR(reste)}</p>
+                    )}
+                    {p.notes && <p className="text-gray-400 italic">{p.notes}</p>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+                    <span className="font-semibold">{formatEUR(p.amount)}</span>
+                    <StatusBadge status={p.status} />
+                    {can("envoyer_relances") && reste > 0 && (
+                      <button
+                        onClick={() => relancer(p.id)}
+                        disabled={reminding === p.id}
+                        className="btn-secondary text-xs px-2 py-1 print:hidden"
+                      >
+                        {reminding === p.id ? "Envoi…" : "Relancer"}
+                      </button>
+                    )}
+                    <PledgeActionButtons
+                      pledge={p}
+                      onOpen={(mode) => setOpenPledge({ id: p.id, mode })}
+                      onChanged={() => load(true)}
+                      onNotice={setNotice}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                  <span className="font-semibold">{formatEUR(p.amount)}</span>
-                  <StatusBadge status={p.status} />
-                  {can("envoyer_relances") && reste > 0 && (
-                    <button
-                      onClick={() => relancer(p.id)}
-                      disabled={reminding === p.id}
-                      className="btn-secondary text-xs px-2 py-1 print:hidden"
-                    >
-                      {reminding === p.id ? "Envoi…" : "Relancer"}
-                    </button>
-                  )}
-                </div>
+                {openPledge && openPledge.id === p.id && (
+                  <PledgeEditPanel
+                    key={openPledge.mode}
+                    pledge={p}
+                    mode={openPledge.mode}
+                    onClose={() => setOpenPledge(null)}
+                    onChanged={() => load(true)}
+                    onNotice={setNotice}
+                  />
+                )}
               </div>
             );
           })}
