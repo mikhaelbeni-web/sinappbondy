@@ -57,8 +57,10 @@ h1 {
 .chip {
   @apply rounded-full border-2 border-ink px-4 py-1.5 text-sm font-semibold text-ink bg-white transition-colors;
 }
+/* Sans @apply chip : la règle fusionnée gardait le fond blanc de .chip
+   après bg-ink, et la pastille choisie ne se distinguait pas. */
 .chip-active {
-  @apply chip bg-ink text-white;
+  @apply rounded-full border-2 border-ink px-4 py-1.5 text-sm font-semibold transition-colors bg-ink text-white;
 }
 
 /* Titre de page : gras bleu nuit + sous-titre gris */
@@ -82,6 +84,7 @@ h1 {
 @media (pointer: coarse) {
   .btn,
   .chip,
+  .chip-active,
   .input,
   .tap {
     min-height: 44px;

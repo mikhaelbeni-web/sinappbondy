@@ -5,8 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { ASSOCIATION_CATEGORIES } from "@/lib/association";
 import { formatEUR, formatDate } from "@/lib/format";
+import PortalSettingsTab from "@/components/PortalSettingsTab";
 
-type Tab = "postes" | "equipe" | "association" | "journal" | "relances" | "paiements" | "louah";
+type Tab = "postes" | "equipe" | "association" | "journal" | "relances" | "paiements" | "louah" | "portail";
 
 export default function AdminPage() {
   const { can, user } = useAuth();
@@ -27,6 +28,7 @@ export default function AdminPage() {
     { key: "relances", label: "Relances automatiques", show: can("envoyer_relances") },
     { key: "paiements", label: "Paiements", show: can("gerer_paiements") },
     { key: "louah", label: "Écran louah", show: can("gerer_offices") },
+    { key: "portail", label: "Portail des fidèles", show: can("gerer_offices") },
   ];
 
   return (
@@ -53,6 +55,7 @@ export default function AdminPage() {
       {tab === "relances" && can("envoyer_relances") && <RemindersTab />}
       {tab === "paiements" && can("gerer_paiements") && <PaymentsTab />}
       {tab === "louah" && can("gerer_offices") && <LouahTab />}
+      {tab === "portail" && can("gerer_offices") && <PortalSettingsTab />}
     </div>
   );
 }
