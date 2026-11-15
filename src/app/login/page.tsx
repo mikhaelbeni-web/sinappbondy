@@ -38,12 +38,14 @@ export default function LoginPage() {
         <p className="hidden md:block text-xl font-bold text-ink mb-4">Connexion de l'équipe</p>
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-700 text-sm rounded-xl p-3 border border-red-200">{error}</div>
+            <div role="alert" className="bg-red-50 text-red-700 text-sm rounded-xl p-3 border border-red-200">{error}</div>
           )}
           <div>
-            <label className="label">E-mail</label>
+            <label htmlFor="login-email" className="label">E-mail</label>
             <input
+              id="login-email"
               type="email"
+              autoComplete="username"
               required
               className="input"
               value={email}
@@ -52,9 +54,11 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="label">Mot de passe</label>
+            <label htmlFor="login-password" className="label">Mot de passe</label>
             <input
+              id="login-password"
               type="password"
+              autoComplete="current-password"
               required
               className="input"
               value={password}

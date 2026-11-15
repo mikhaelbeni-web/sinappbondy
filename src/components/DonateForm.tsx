@@ -39,15 +39,16 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <div>
-        <label className="label">Montant</label>
-        <div className="flex flex-wrap gap-2">
+        <p className="label" id="don-montant">Montant</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="don-montant">
           {amounts.map((a) => (
             <button
               type="button"
               key={a}
               onClick={() => setAmount(String(a))}
+              aria-pressed={Number(amount) === a}
               className={Number(amount) === a ? "chip-active" : "chip hover:bg-cream"}
             >
               {a} €
@@ -55,10 +56,12 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
           ))}
           <input
             type="number"
+            inputMode="numeric"
             min="1"
             step="1"
+            aria-label="Autre montant en euros"
             className="input basis-full"
-            placeholder="Autre"
+            placeholder="Autre montant (€)"
             value={amounts.includes(Number(amount)) ? "" : amount}
             onChange={(e) => setAmount(e.target.value)}
           />
@@ -72,16 +75,16 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="label">Prénom</label>
-          <input required className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+          <label htmlFor="don-firstName" className="label">Prénom</label>
+          <input id="don-firstName" autoComplete="given-name" required className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
         </div>
         <div>
-          <label className="label">Nom</label>
-          <input required className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+          <label htmlFor="don-lastName" className="label">Nom</label>
+          <input id="don-lastName" autoComplete="family-name" required className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
         </div>
         <div className="sm:col-span-2">
-          <label className="label">E-mail</label>
-          <input required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <label htmlFor="don-email" className="label">E-mail</label>
+          <input id="don-email" autoComplete="email" required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </div>
       </div>
 
@@ -93,16 +96,16 @@ export default function DonateForm({ campaign, suggested }: { campaign?: string;
       {wantReceipt && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-3">
-            <label className="label">Adresse postale</label>
-            <input required className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <label htmlFor="don-address" className="label">Adresse postale</label>
+            <input id="don-address" autoComplete="street-address" required className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </div>
           <div>
-            <label className="label">Code postal</label>
-            <input required className="input" value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
+            <label htmlFor="don-postalCode" className="label">Code postal</label>
+            <input id="don-postalCode" autoComplete="postal-code" inputMode="numeric" required className="input" value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
           </div>
           <div className="sm:col-span-2">
-            <label className="label">Ville</label>
-            <input required className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+            <label htmlFor="don-city" className="label">Ville</label>
+            <input id="don-city" autoComplete="address-level2" required className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
           </div>
         </div>
       )}
