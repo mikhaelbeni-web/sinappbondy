@@ -10,11 +10,12 @@ export async function GET() {
   try {
     const donorId = requireDonorId();
     const db = adminDb();
-    const [donorSnap, pledgesSnap, paySnap, receiptSnap] = await Promise.all([
+    const [donorSnap, pledgesSnap, paySnap, receiptSnap, plansSnap] = await Promise.all([
       db.collection("donors").doc(donorId).get(),
       db.collection("pledges").where("donorId", "==", donorId).get(),
       db.collection("payments").where("donorId", "==", donorId).get(),
       db.collection("receipts").where("donorId", "==", donorId).get(),
+      db.collection("seatingPlans").where("published", "==", true).get(),
     ]);
     if (!donorSnap.exists) return jsonError("Fiche introuvable.", 404);
     const d = donorSnap.data() as any;
@@ -58,6 +59,10 @@ export async function GET() {
       receipts,
       balance,
       balanceUrl,
+      seatingPlans: plansSnap.docs
+        .map((x) => x.data() as any)
+        .filter((p) => p.active !== false && p.layout)
+        .map((p) => ({ id: p.id, name: p.name, salesOpen: !!p.salesOpen })),
     });
   } catch (err) {
     return handleApiError(err);

@@ -42,8 +42,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
     const snap = await ref.get();
     if (!snap.exists) return jsonError("Plan introuvable.", 404);
     const current = snap.data() as any;
-    const { name, sections, active, layout } = await req.json();
+    const { name, sections, active, layout, published, salesOpen, maxPerDonor } = await req.json();
     const update: any = { updatedAt: new Date().toISOString() };
+    // Réservation par les fidèles : publier le plan, puis ouvrir les ventes.
+    if (typeof published === "boolean" || typeof salesOpen === "boolean") {
+      const pub = typeof published === "boolean" ? published : !!current.published;
+      const open = typeof salesOpen === "boolean" ? salesOpen : !!current.salesOpen;
+      if (pub && !current.layout) return jsonError("Dessinez d'abord le plan de salle : seul un plan dessiné peut être publié.", 400);
+      if (open && !pub) return jsonError("Publiez le plan avant d'ouvrir les ventes.", 400);
+      update.published = pub;
+      update.salesOpen = pub && open;
+    }
+    if (maxPerDonor !== undefined) update.maxPerDonor = Math.min(50, Math.max(1, Math.round(Number(maxPerDonor) || 6)));
     if (typeof name === "string" && name.trim()) update.name = name.trim();
     if (typeof active === "boolean") update.active = active;
     if (layout !== undefined) {

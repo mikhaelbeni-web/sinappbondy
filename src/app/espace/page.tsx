@@ -116,6 +116,20 @@ function EspaceInner() {
           </div>
         </div>
 
+        {data.seatingPlans?.length > 0 && (
+          <div className="card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-ink">Places des fêtes</h2>
+              <p className="text-sm text-gray-600">
+                {data.seatingPlans.map((p: any) => `${p.name}${p.salesOpen ? "" : " (réservations pas encore ouvertes)"}`).join(" · ")}
+              </p>
+            </div>
+            <a href="/espace/places" className="btn-gold shrink-0">
+              {data.seatingPlans.some((p: any) => p.salesOpen) ? "Choisir mes places" : "Voir le plan"}
+            </a>
+          </div>
+        )}
+
         <Section title="Mes promesses">
           {data.pledges.length === 0 && <Empty>Aucune promesse.</Empty>}
           {data.pledges.map((p: any) => (

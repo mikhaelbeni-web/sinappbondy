@@ -43,6 +43,21 @@ export default function SeatingPlanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Réservation par les fidèles : publication, ouverture des ventes, plafond.
+  async function setSales(patch: { published?: boolean; salesOpen?: boolean; maxPerDonor?: number }) {
+    setBusy(true);
+    setMessage("");
+    const res = await fetch(`/api/seating/${planId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) setMessage(d.error || "Modification impossible.");
+    setBusy(false);
+    await load();
+  }
+
   async function saveLayout(layout: RoomLayout, sections: SeatSection[]): Promise<string | null> {
     const res = await fetch(`/api/seating/${planId}`, {
       method: "PATCH",
@@ -277,6 +292,45 @@ export default function SeatingPlanPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {drawn && plan.layout && (
+        <div className="card p-4 space-y-3 print:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-ink">Réservation par les fidèles</h2>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.salesOpen ? "bg-green-100 text-green-800" : plan.published ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-700"}`}>
+              {plan.salesOpen ? "Ventes ouvertes" : plan.published ? "Publié, ventes fermées" : "Non publié"}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600">
+            {plan.salesOpen
+              ? "Les fidèles choisissent leurs places dans leur espace (bouton « Choisir mes places »). Chaque place crée une somme due au tarif de sa rangée."
+              : plan.published
+                ? "Les fidèles voient le plan dans leur espace, sans pouvoir réserver. Ouvrez les ventes quand vous êtes prêt."
+                : "Le plan n'est visible que par l'équipe. Publiez-le pour le montrer aux fidèles, puis ouvrez les ventes."}
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            {!plan.published && <button className="btn-gold" disabled={busy} onClick={() => setSales({ published: true })}>Publier le plan</button>}
+            {plan.published && !plan.salesOpen && <button className="btn-gold" disabled={busy} onClick={() => setSales({ salesOpen: true })}>Ouvrir les ventes</button>}
+            {plan.salesOpen && <button className="btn-secondary" disabled={busy} onClick={() => setSales({ salesOpen: false })}>Fermer les ventes</button>}
+            {plan.published && <button className="btn-secondary" disabled={busy} onClick={() => setSales({ published: false, salesOpen: false })}>Retirer de l'espace fidèle</button>}
+            <div>
+              <label htmlFor="maxPerDonor" className="text-xs text-gray-500 block">Places au plus par famille</label>
+              <input
+                id="maxPerDonor"
+                type="number"
+                min={1}
+                max={50}
+                className="input w-28"
+                defaultValue={plan.maxPerDonor || 6}
+                onBlur={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= 1 && v !== (plan.maxPerDonor || 6)) setSales({ maxPerDonor: v });
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
