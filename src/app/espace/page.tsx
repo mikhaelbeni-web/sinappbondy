@@ -124,7 +124,7 @@ function EspaceInner() {
                 {data.seatingPlans.map((p: any) => `${p.name}${p.salesOpen ? "" : " (réservations pas encore ouvertes)"}`).join(" · ")}
               </p>
             </div>
-            <a href="/espace/places" className="btn-gold shrink-0">
+            <a href="/places" className="btn-gold shrink-0">
               {data.seatingPlans.some((p: any) => p.salesOpen) ? "Choisir mes places" : "Voir le plan"}
             </a>
           </div>

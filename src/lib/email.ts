@@ -346,6 +346,8 @@ export async function sendSeatConfirmationEmail(params: {
   seats: string[];
   due: number;
   payUrl: string | null;
+  espaceUrl?: string | null; // réservation en ligne : accès à l'espace fidèle
+  holdHours?: number; // délai avant libération des places impayées (0 = aucun)
 }) {
   const mailer = getMailer();
   const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "la synagogue";
@@ -364,6 +366,8 @@ export async function sendSeatConfirmationEmail(params: {
              <p style="text-align:center;margin:28px 0;"><a href="${params.payUrl}" style="background:#b8860b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;">Régler en ligne</a></p>`
           : ""
       }
+      ${params.holdHours ? `<p>Vos places sont gardées ${params.holdHours} heures. Sans règlement d'ici là, elles seront remises en vente.</p>` : ""}
+      ${params.espaceUrl ? `<p>Votre espace fidèle (places, règlements, reçus) : <a href="${params.espaceUrl}">ouvrir mon espace</a>. Ce lien est personnel, ne le transférez pas.</p>` : ""}
       <p>Chana tova !</p>
     </div>
   `;
