@@ -14,7 +14,7 @@ import { PORTAL_LINKS } from "@/lib/portal";
 export default function PortalNav({ name, tagline }: { name: string; tagline: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { needsSetup, loading, user } = useAuth();
+  const { needsSetup, loading } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Première installation : l'assistant de configuration reste prioritaire.
