@@ -23,6 +23,9 @@ export interface SeatingPlanDoc {
   sections: SeatSection[];
   layout?: RoomLayout | null; // plan dessiné (sinon grille de sections)
   drawn?: boolean; // plan créé en mode dessiné (layout peut être encore vide)
+  published?: boolean; // visible dans l'espace fidèle
+  salesOpen?: boolean; // les fidèles peuvent réserver eux-mêmes
+  maxPerDonor?: number; // places qu'une famille peut réserver elle-même
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -98,3 +101,5 @@ export function findPlanSeat(plan: PlanLike, sectionId: string, row: number, sea
 export function planSeatLabel(plan: PlanLike, sectionId: string, row: number, seat: number): string {
   return findPlanSeat(plan, sectionId, row, seat)?.label || (isDrawn(plan) ? `rangée ${row} place ${seat}` : seatLabel(plan.sections.find((x) => x.id === sectionId)?.name || "", row, seat));
 }
+
+export const selfBookingMax = (plan: Pick<SeatingPlanDoc, "maxPerDonor">) => Math.min(50, Math.max(1, Math.round(Number(plan.maxPerDonor) || 6)));
