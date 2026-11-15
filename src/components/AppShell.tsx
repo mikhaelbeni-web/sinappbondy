@@ -57,7 +57,7 @@ const NAV: NavItem[] = [
 
 // Libellé du menu : toujours visible dans le tiroir mobile, visible sur
 // ordinateur seulement quand le rail est survolé (ou parcouru au clavier).
-const RAIL_LABEL = "md:hidden md:group-hover/rail:block md:group-focus-within/rail:block md:pr-2";
+const RAIL_LABEL = "md:hidden md:group-hover/rail:block md:group-focus-within/rail:block md:pr-2 md:whitespace-nowrap";
 
 const ADMIN_PERMS: PermissionKey[] = ["gerer_equipe", "gerer_postes", "gerer_paiements", "envoyer_relances", "gerer_offices"];
 
@@ -107,11 +107,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {menuOpen && <div className="md:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setMenuOpen(false)} aria-hidden />}
 
       {/* Menu : tiroir avec libellés sur mobile ; sur ordinateur, rail
-          d'icônes qui s'élargit au survol pour afficher les libellés, par-dessus
-          le contenu (l'emplacement de 72 px reste réservé dans la mise en page). */}
-      <div className="contents md:block md:sticky md:top-3 md:h-[calc(100dvh-1.5rem)] md:w-[72px] md:shrink-0 md:z-50 print:hidden">
+          d'icônes qui s'élargit au survol pour afficher les libellés et décale
+          le contenu de la page (demande de mikhael, 2026-11-15). */}
+      <div className="group/rail contents md:block md:sticky md:top-3 md:h-[calc(100dvh-1.5rem)] md:w-[72px] md:hover:w-60 md:focus-within:w-60 md:transition-[width] md:duration-200 motion-reduce:transition-none md:shrink-0 md:z-50 print:hidden">
       <aside
-        className={`group/rail fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-ink-dark via-ink to-ink-dark text-white flex flex-col transform transition-transform md:absolute md:inset-y-0 md:left-0 md:w-auto md:min-w-[72px] md:translate-x-0 md:rounded-2xl md:shadow-none md:hover:shadow-soft md:focus-within:shadow-soft ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-ink-dark via-ink to-ink-dark text-white flex flex-col transform transition-transform md:absolute md:inset-y-0 md:left-0 md:right-0 md:w-auto md:overflow-hidden md:translate-x-0 md:rounded-2xl md:shadow-none md:hover:shadow-soft md:focus-within:shadow-soft ${
           menuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
