@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { remainingOf, round2 } from "@/lib/format";
 import { verifyPayTarget, type PayTarget } from "@/lib/payments";
 import { createCheckout } from "@/lib/helloasso";
+import { settleBooking } from "@/lib/seatingServer";
 
 // Lien de paiement public (envoyé par e-mail) : ?pledge=<id>&t=<signature>
 // ou ?donor=<id>&t=<signature> pour régler tout le solde du fidèle.
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
     let firstName = "";
     let lastName = "";
     let metadata: Record<string, string>;
+    let backPath: string | undefined;
 
     if (target.kind === "pledge") {
       const snap = await db.collection("pledges").doc(target.id).get();
@@ -46,13 +48,18 @@ export async function GET(req: NextRequest) {
       metadata = { kind: "pledge", pledgeId: p.id, donorId: p.donorId };
     } else if (target.kind === "booking") {
       // Réservation de places : seulement les places de cette réservation.
+      // Une garde expirée est d'abord libérée : on ne fait pas payer une
+      // place qui a pu être remise en vente.
+      await settleBooking(target.id);
       const snap = await db.collection("pledges").where("bookingId", "==", target.id).get();
       const open = snap.docs.map((d) => d.data() as any).filter((p) => p.status !== "annule" && remainingOf(p) > 0);
+      if (!snap.docs.length) return NextResponse.redirect(`${appUrl}/places?expire=1`, 303);
       if (!open.length) return NextResponse.redirect(`${appUrl}/merci?deja=1`, 303);
       amount = round2(open.reduce((s, p) => s + remainingOf(p), 0));
       label = `${open.length} place(s) - ${open[0].serviceLabel}`;
       email = open[0].donorEmail;
-      metadata = { kind: "booking", donorId: open[0].donorId, pledgeIds: open.map((p) => p.id).join(",") };
+      metadata = { kind: "booking", bookingId: target.id, donorId: open[0].donorId, pledgeIds: open.map((p) => p.id).join(",") };
+      backPath = "/api/helloasso/cancel/{ref}";
     } else {
       const donorSnap = await db.collection("donors").doc(target.id).get();
       if (!donorSnap.exists) return NextResponse.redirect(`${appUrl}/merci?erreur=lien`, 303);
@@ -68,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     if (amount <= 0) return NextResponse.redirect(`${appUrl}/merci?deja=1`, 303);
 
-    const url = await createCheckout({ amount, label, email, firstName, lastName, containsDonation: true, metadata });
+    const url = await createCheckout({ amount, label, email, firstName, lastName, containsDonation: true, metadata, backPath });
     return NextResponse.redirect(url, 303);
   } catch (err) {
     console.error("[pay]", err);

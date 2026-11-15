@@ -9,6 +9,7 @@ import type { LayoutSeat } from "@/lib/roomLayout";
 // choisir : le nom et l'e-mail ne sont saisis qu'à la validation (la fiche
 // du fidèle est alors créée ou retrouvée). Les places des autres familles
 // apparaissent occupées, sans nom.
+const HOLD = 20; // minutes de garde d'une place payante (HOLD_MINUTES côté serveur)
 type Sel = { row: number; seat: number; label: string; price: number };
 
 export default function SeatPicker() {
@@ -21,6 +22,7 @@ export default function SeatPicker() {
   const [error, setError] = useState("");
   const [done, setDone] = useState<any>(null);
   const [info, setInfo] = useState("");
+  const [redirecting, setRedirecting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   async function load() {
@@ -32,6 +34,10 @@ export default function SeatPicker() {
 
   useEffect(() => {
     load();
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("annule")) setError("Paiement interrompu : vos places n'ont pas été réservées et sont de nouveau libres. Vous pouvez recommencer.");
+    if (q.get("expire")) setError("Le délai de paiement est dépassé : ces places n'ont pas été réservées. Vous pouvez les choisir de nouveau si elles sont encore libres.");
+    if (q.get("annule") || q.get("expire")) window.history.replaceState(null, "", "/places");
   }, []);
 
   if (!data) return <div className="card p-6 text-sm text-gray-500">Chargement du plan…</div>;
@@ -43,12 +49,17 @@ export default function SeatPicker() {
   const priceOf = (sectionId: string) => plan.sections.find((s: any) => s.id === sectionId)?.price || 0;
   const left = plan.max - plan.mine.length - selected.length;
   const total = selected.reduce((s, x) => s + x.price, 0);
+  const bookLabel = total > 0 ? `Payer ${formatEUR(total)} pour réserver` : "Réserver ces places";
+  const payNote = total > 0 ? `Une place payante n'est réservée qu'une fois payée. Vos places sont gardées ${HOLD} minutes le temps du paiement, puis remises en vente si rien n'est réglé.` : "";
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const pendingMine = plan.mine.filter((m: any) => m.pending);
   const isSel = (s: LayoutSeat) => selected.some((x) => x.row === s.rowNum && x.seat === s.k + 1);
 
   function look(s: LayoutSeat) {
     const key = `${s.rowNum}:${s.k + 1}`;
     const label = `${s.letter}${s.number}`;
     const price = priceOf(s.sectionId);
+    if (mine.get(key)?.pending) return { fill: "#ede9fe", stroke: "#7c3aed", text: s.number, textColor: "#4c1d95", title: `${label} · en attente de votre paiement` };
     if (mine.has(key)) return { fill: "#dcfce7", stroke: "#16a34a", text: s.number, textColor: "#14532d", title: `${label} · votre place` };
     if (taken.has(key)) return { fill: "#d1d5db", stroke: "#9ca3af", text: s.number, textColor: "#6b7280", title: `${label} · occupée` };
     if (isSel(s)) return { fill: "#b8893a", stroke: "#8a6633", text: s.number, textColor: "#fff", title: `${label} · sélectionnée` };
@@ -90,6 +101,11 @@ export default function SeatPicker() {
         setSelected([]);
         setStep("choose");
       }
+    } else if (d.total > 0 && d.payUrl) {
+      // Place payante : réservée seulement une fois payée, on part au paiement.
+      setRedirecting(true);
+      window.location.href = d.payUrl;
+      return;
     } else {
       setDone({ ...d, email: form.email });
       setSelected([]);
@@ -131,7 +147,7 @@ export default function SeatPicker() {
         <h2 className="font-semibold text-ink">{plan.name}</h2>
         <p className="text-sm text-gray-600">
           {plan.salesOpen
-            ? `Touchez les places libres que vous souhaitez (${plan.max} au plus), puis validez. Aucun compte n'est nécessaire : votre e-mail vous sera demandé à la fin.`
+            ? `Touchez les places libres que vous souhaitez (${plan.max} au plus), puis validez. Aucun compte n'est nécessaire : votre e-mail vous sera demandé à la fin. Une place payante est réservée une fois payée en ligne.`
             : "Les réservations ne sont pas encore ouvertes. Vous pouvez déjà consulter le plan."}
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
@@ -141,16 +157,22 @@ export default function SeatPicker() {
         </div>
       </div>
 
+      {redirecting && <p role="status" className="card p-4 text-sm text-gray-700">Places gardées {HOLD} minutes. Ouverture du paiement sécurisé…</p>}
+      {pendingMine.length > 0 && !redirecting && (
+        <div role="status" className="card p-5 space-y-3 text-sm border-l-4 border-violet-600">
+          <p className="font-semibold text-ink">Pas encore réservée(s) : {pendingMine.map((m: any) => m.label).join(", ")}.</p>
+          <p className="text-gray-700">Ces places sont gardées jusqu'à {hhmm(pendingMine[0].holdUntil)} dans l'attente de votre paiement, puis remises en vente.</p>
+          {data.balanceUrl && <a href={data.balanceUrl} className="btn-gold w-full sm:w-auto">Payer {formatEUR(data.due)} pour réserver</a>}
+        </div>
+      )}
       {error && <p role="alert" className="card p-4 text-sm text-red-700">{error}</p>}
       {info && <p role="status" className="card p-4 text-sm text-green-800">{info}</p>}
 
       {done && (
         <div role="status" className="card p-5 space-y-3 text-sm border-l-4 border-green-600">
           <p className="font-semibold text-green-800">Place(s) réservée(s) : {done.booked.join(", ")}.</p>
-          {done.total > 0 && done.payUrl && <a href={done.payUrl} className="btn-gold w-full sm:w-auto">Régler {formatEUR(done.total)} en ligne</a>}
-          {done.total > 0 && done.holdHours > 0 && <p className="text-gray-700">Vos places sont gardées {done.holdHours} heures. Sans règlement d'ici là, elles seront remises en vente.</p>}
           {done.emailed
-            ? <p className="text-gray-700">Un e-mail récapitulatif vous a été envoyé{done.email ? ` à ${done.email}` : ""}, avec le lien de règlement et l'accès à votre espace fidèle. Pensez à vérifier vos indésirables.</p>
+            ? <p className="text-gray-700">Un e-mail récapitulatif vous a été envoyé{done.email ? ` à ${done.email}` : ""}, avec l'accès à votre espace fidèle. Pensez à vérifier vos indésirables.</p>
             : <p className="text-gray-700">L'e-mail récapitulatif n'a pas pu être envoyé. Notez vos places et contactez la synagogue en cas de besoin.</p>}
           {done.created && <p className="text-gray-700">Votre espace fidèle vient d'être créé : <a href="/espace" className="text-gold hover:underline tap">ouvrir mon espace</a>.</p>}
         </div>
@@ -162,9 +184,10 @@ export default function SeatPicker() {
             <strong>{selected.length} place(s)</strong> : {selected.map((s) => s.label).join(", ")} · {total > 0 ? formatEUR(total) : "gratuit"}
           </p>
           <div className="flex flex-wrap gap-2">
-            <button className="btn-gold" disabled={busy} onClick={next}>{data.signedIn ? (busy ? "Réservation…" : "Réserver ces places") : "Continuer"}</button>
+            <button className="btn-gold" disabled={busy} onClick={next}>{data.signedIn ? (busy ? "Un instant…" : bookLabel) : "Continuer"}</button>
             <button className="btn-secondary" disabled={busy} onClick={() => setSelected([])}>Tout désélectionner</button>
           </div>
+          {payNote && <p className="text-xs text-gray-600">{payNote}</p>}
         </div>
       )}
 
@@ -191,9 +214,10 @@ export default function SeatPicker() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" className="btn-gold" disabled={busy}>{busy ? "Réservation…" : "Réserver ces places"}</button>
+            <button type="submit" className="btn-gold" disabled={busy}>{busy ? "Un instant…" : bookLabel}</button>
             <button type="button" className="btn-secondary" disabled={busy} onClick={() => setStep("choose")}>Modifier mon choix</button>
           </div>
+          {payNote && <p className="text-xs text-gray-600">{payNote}</p>}
         </form>
       )}
 
@@ -205,6 +229,7 @@ export default function SeatPicker() {
           <span><span className="inline-block w-3 h-3 border border-gray-500 bg-white align-middle mr-1" />Libre</span>
           <span><span className="inline-block w-3 h-3 bg-gold align-middle mr-1" />Sélectionnée</span>
           <span><span className="inline-block w-3 h-3 bg-green-100 border border-green-600 align-middle mr-1" />Votre place</span>
+          {pendingMine.length > 0 && <span><span className="inline-block w-3 h-3 bg-violet-100 border border-violet-600 align-middle mr-1" />En attente de votre paiement</span>}
           <span><span className="inline-block w-3 h-3 bg-gray-300 border border-gray-400 align-middle mr-1" />Occupée</span>
         </div>
       </div>
@@ -217,13 +242,13 @@ export default function SeatPicker() {
               <div key={m.id} className="p-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
                 <span className="font-medium text-ink">Place {m.label}</span>
                 <span className="flex items-center gap-3">
-                  <span className={m.remaining > 0 ? "text-amber-700" : "text-green-700"}>{m.remaining > 0 ? `reste ${formatEUR(m.remaining)}` : "réglée ou offerte"}</span>
+                  <span className={m.remaining > 0 ? "text-amber-700" : "text-green-700"}>{m.pending ? "en attente de paiement, pas encore réservée" : m.remaining > 0 ? `reste ${formatEUR(m.remaining)}` : "réglée ou offerte"}</span>
                   {m.canRelease && plan.salesOpen && <button className="tap text-red-600 hover:underline" disabled={busy} onClick={() => release(m)}>Rendre</button>}
                 </span>
               </div>
             ))}
           </div>
-          {data.due > 0 && data.balanceUrl && !done && (
+          {data.due > 0 && data.balanceUrl && !done && pendingMine.length === 0 && (
             <div className="p-4 border-t"><a href={data.balanceUrl} className="btn-gold w-full sm:w-auto">Régler {formatEUR(data.due)} en ligne</a></div>
           )}
         </div>

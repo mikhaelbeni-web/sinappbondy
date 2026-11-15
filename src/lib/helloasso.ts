@@ -116,10 +116,12 @@ export async function createCheckout(params: {
   lastName?: string;
   containsDonation: boolean;
   metadata: Record<string, string>;
+  backPath?: string; // retour si le payeur abandonne (défaut : /merci?annule=1) ; {ref} = identifiant du panier
 }): Promise<string> {
   const db = adminDb();
   const ref = db.collection("checkouts").doc();
   const body = checkoutBody(params.amount, params.label, params.containsDonation, ref.id);
+  if (params.backPath) body.backUrl = `${appUrl()}${params.backPath.replace("{ref}", ref.id)}`;
   const payer: Record<string, string> = {};
   if (params.email) payer.email = params.email;
   if (params.firstName) payer.firstName = params.firstName;
@@ -252,6 +254,11 @@ export async function confirmCheckout(checkoutId: string): Promise<boolean> {
       createdByName: "Paiement en ligne",
     });
     if (payment) await autoReceiptForPayment(payment, "Paiement en ligne");
+    // Places des fêtes : payées, elles deviennent réservées.
+    if (m.kind === "booking" && m.bookingId) {
+      const { settleBooking } = await import("./seatingServer");
+      await settleBooking(m.bookingId).catch((err) => console.error("[helloasso] places", err));
+    }
     if (isTicket) {
       const evSnap = await db.collection("events").doc(m.eventId).get();
       if (evSnap.exists) {

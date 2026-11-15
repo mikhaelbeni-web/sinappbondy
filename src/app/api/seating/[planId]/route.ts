@@ -4,6 +4,7 @@ import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { paidOf, remainingOf } from "@/lib/format";
 import { cleanSections, findPlanSeat, isDrawn } from "@/lib/seating";
 import { cleanLayout } from "@/lib/roomLayout";
+import { settlePendingSeats } from "@/lib/seatingServer";
 
 // Plan + places attribuées (avec état de paiement de la promesse liée).
 export async function GET(_req: NextRequest, { params }: { params: { planId: string } }) {
@@ -12,6 +13,8 @@ export async function GET(_req: NextRequest, { params }: { params: { planId: str
     const db = adminDb();
     const planSnap = await db.collection("seatingPlans").doc(params.planId).get();
     if (!planSnap.exists) return jsonError("Plan introuvable.", 404);
+    // Places en attente de paiement en ligne : confirmées si payées, libérées si la garde a expiré.
+    await settlePendingSeats(planSnap.data() as any).catch((e) => console.error("[seating] gardes", e));
     const seatsSnap = await db.collection("seats").where("planId", "==", params.planId).get();
     const seats = seatsSnap.docs.map((d) => d.data() as any);
     const pledgeIds = seats.map((s) => s.pledgeId).filter(Boolean);
@@ -42,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
     const snap = await ref.get();
     if (!snap.exists) return jsonError("Plan introuvable.", 404);
     const current = snap.data() as any;
-    const { name, sections, active, layout, published, salesOpen, maxPerDonor, holdHours } = await req.json();
+    const { name, sections, active, layout, published, salesOpen, maxPerDonor } = await req.json();
     const update: any = { updatedAt: new Date().toISOString() };
     // Réservation par les fidèles : publier le plan, puis ouvrir les ventes.
     if (typeof published === "boolean" || typeof salesOpen === "boolean") {
@@ -53,7 +56,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
       update.published = pub;
       update.salesOpen = pub && open;
     }
-    if (holdHours !== undefined) update.holdHours = Math.min(720, Math.max(0, Math.round(Number(holdHours) || 0)));
     if (maxPerDonor !== undefined) update.maxPerDonor = Math.min(50, Math.max(1, Math.round(Number(maxPerDonor) || 6)));
     if (typeof name === "string" && name.trim()) update.name = name.trim();
     if (typeof active === "boolean") update.active = active;

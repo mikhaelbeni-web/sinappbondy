@@ -36,7 +36,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { planId: s
         if (p.exists) {
           const pl = p.data() as any;
           if (paidOf(pl) > 0) throw fail("Cette place est déjà (en partie) réglée : contactez la synagogue.", 409);
-          tx.update(pref, { status: "annule", updatedAt: new Date().toISOString() });
+          // Jamais réservée (en attente de paiement) : la somme due disparaît avec elle.
+          if (seat.pending) tx.delete(pref);
+          else tx.update(pref, { status: "annule", updatedAt: new Date().toISOString() });
         }
       }
       tx.delete(ref);

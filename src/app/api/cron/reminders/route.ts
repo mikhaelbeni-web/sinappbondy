@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isRestDay, runReminders } from "@/lib/autoReminders";
 import { runHazkaraReminders } from "@/lib/hazkarot";
 import { confirmPendingCheckouts } from "@/lib/helloasso";
-import { publishedPlans, releaseExpiredHolds } from "@/lib/seatingServer";
+import { publishedPlans, settlePendingSeats } from "@/lib/seatingServer";
 
 // Relances de dons et rappels de hazkara, appelé chaque jour par Vercel Cron (voir vercel.json). Vercel envoie
 // « Authorization: Bearer $CRON_SECRET » quand la variable est définie.
@@ -20,10 +20,10 @@ export async function GET(req: NextRequest) {
     } catch (err) {
       console.error("[cron/reminders] helloasso", err);
     }
-    // Places réservées en ligne et restées impayées au-delà du délai du plan.
+    // Places gardées en ligne et jamais payées : remises en vente.
     let seatsReleased = 0;
     try {
-      for (const plan of await publishedPlans()) seatsReleased += await releaseExpiredHolds(plan);
+      for (const plan of await publishedPlans()) seatsReleased += (await settlePendingSeats(plan)).released;
     } catch (err) {
       console.error("[cron/reminders] places", err);
     }

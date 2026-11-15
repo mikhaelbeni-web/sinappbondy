@@ -44,7 +44,7 @@ export default function SeatingPlanPage() {
   }, []);
 
   // Réservation par les fidèles : publication, ouverture des ventes, plafond.
-  async function setSales(patch: { published?: boolean; salesOpen?: boolean; maxPerDonor?: number; holdHours?: number }) {
+  async function setSales(patch: { published?: boolean; salesOpen?: boolean; maxPerDonor?: number }) {
     setBusy(true);
     setMessage("");
     const res = await fetch(`/api/seating/${planId}`, {
@@ -194,6 +194,7 @@ export default function SeatingPlanPage() {
     const sec = plan.sections.find((x: any) => x.id === s.sectionId);
     const name = `${s.letter}${s.number}`;
     if (isSel) return { fill: "#b8893a", stroke: "#8a6633", text: s.number, textColor: "#fff", title: `${name} · sélectionnée`, ring: hl };
+    if (taken?.pending) return { fill: "#ede9fe", stroke: "#7c3aed", text: s.number, textColor: "#4c1d95", title: `${name} · ${taken.donorName} · paiement en ligne en cours (pas encore réservée)`, ring: hl };
     if (taken)
       return taken.remaining > 0
         ? { fill: "#fef3c7", stroke: "#f59e0b", text: s.number, textColor: "#78350f", title: `${name} · ${taken.donorName} · à régler`, ring: hl }
@@ -243,6 +244,7 @@ export default function SeatingPlanPage() {
                 <strong>{label(focus)}</strong> :{" "}
                 <Link href={`/donors/${focus.donorId}`} className="text-gold hover:underline tap">{focus.donorName}</Link>
                 {focus.pledgeId ? (focus.remaining > 0 ? ` · reste ${formatEUR(focus.remaining)}` : " · réglée") : " · offerte"}
+                {focus.pending ? " · paiement en ligne en cours, pas encore réservée (remise en vente si rien n'est payé)" : ""}
                 {focus.confirmedAt ? " · confirmée" : ""}
               </p>
               <button className="text-red-600 text-sm hover:underline tap" onClick={() => release(focus.id)}>Libérer</button>
@@ -331,23 +333,8 @@ export default function SeatingPlanPage() {
                 }}
               />
             </div>
-            <div>
-              <label htmlFor="holdHours" className="text-xs text-gray-500 block">Libérer les places impayées après (heures, 0 = jamais)</label>
-              <input
-                id="holdHours"
-                type="number"
-                min={0}
-                max={720}
-                className="input w-28"
-                defaultValue={plan.holdHours || 0}
-                onBlur={(e) => {
-                  const v = Number(e.target.value);
-                  if (v >= 0 && v !== (plan.holdHours || 0)) setSales({ holdHours: v });
-                }}
-              />
-            </div>
           </div>
-          <p className="text-xs text-gray-500">La libération automatique ne concerne que les places réservées en ligne, payantes et sans aucun versement. Les places que vous attribuez vous-même ne sont jamais libérées.</p>
+          <p className="text-xs text-gray-500">En ligne, une place payante n'est réservée qu'une fois payée : elle est gardée 20 minutes le temps du paiement, puis remise en vente si rien n'est réglé. Une place gratuite est réservée aussitôt. Les places que vous attribuez vous-même ne sont jamais libérées.</p>
         </div>
       )}
 
@@ -427,6 +414,7 @@ export default function SeatingPlanPage() {
         <span><span className="inline-block w-3 h-3 border border-gray-300 bg-white align-middle mr-1" />Libre</span>
         <span><span className="inline-block w-3 h-3 bg-gold align-middle mr-1" />Sélectionnée</span>
         <span><span className="inline-block w-3 h-3 bg-amber-100 border border-amber-300 align-middle mr-1" />À régler</span>
+        <span><span className="inline-block w-3 h-3 bg-violet-100 border border-violet-600 align-middle mr-1" />Paiement en ligne en cours</span>
         <span><span className="inline-block w-3 h-3 bg-green-100 border border-green-300 align-middle mr-1" />Réglée ou offerte</span>
       </div>
 

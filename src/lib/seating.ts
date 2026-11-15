@@ -26,7 +26,6 @@ export interface SeatingPlanDoc {
   published?: boolean; // visible dans l'espace fidèle
   salesOpen?: boolean; // les fidèles peuvent réserver eux-mêmes
   maxPerDonor?: number; // places qu'une famille peut réserver elle-même
-  holdHours?: number; // délai (h) avant libération d'une place réservée en ligne et impayée ; 0 = jamais
   active: boolean;
   createdAt: string;
   updatedAt: string;
