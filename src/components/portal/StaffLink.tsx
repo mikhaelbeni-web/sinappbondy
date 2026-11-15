@@ -8,7 +8,7 @@ export default function StaffLink() {
   const { user } = useAuth();
   return (
     <Link href={user ? "/dashboard" : "/login"} className="tap hover:text-white">
-      {user ? "Tableau de bord" : "Espace équipe"}
+      {user ? "Espace membre" : "Espace équipe"}
     </Link>
   );
 }

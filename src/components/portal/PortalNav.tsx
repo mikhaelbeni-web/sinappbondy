@@ -56,8 +56,8 @@ export default function PortalNav({ name, tagline }: { name: string; tagline: st
           {user && (
             <Link
               href="/dashboard"
-              title="Tableau de bord de l'équipe"
-              aria-label="Tableau de bord de l'équipe"
+              title="Espace membre"
+              aria-label="Espace membre"
               className="tap inline-flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:text-ink hover:bg-cream"
             >
               <LayoutDashboard className="w-4 h-4" aria-hidden />
