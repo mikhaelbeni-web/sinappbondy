@@ -6,8 +6,9 @@ import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { ASSOCIATION_CATEGORIES } from "@/lib/association";
 import { formatEUR, formatDate } from "@/lib/format";
 import PortalSettingsTab from "@/components/PortalSettingsTab";
+import KiddushAdminTab from "@/components/KiddushAdminTab";
 
-type Tab = "postes" | "equipe" | "association" | "journal" | "relances" | "paiements" | "louah" | "portail";
+type Tab = "postes" | "equipe" | "association" | "journal" | "relances" | "paiements" | "louah" | "portail" | "kiddouch";
 
 export default function AdminPage() {
   const { can, user } = useAuth();
@@ -29,6 +30,7 @@ export default function AdminPage() {
     { key: "paiements", label: "Paiements", show: can("gerer_paiements") },
     { key: "louah", label: "Écran louah", show: can("gerer_offices") },
     { key: "portail", label: "Portail des fidèles", show: can("gerer_offices") },
+    { key: "kiddouch", label: "Kiddouch & salons", show: can("gerer_offices") },
   ];
 
   return (
@@ -56,6 +58,7 @@ export default function AdminPage() {
       {tab === "paiements" && can("gerer_paiements") && <PaymentsTab />}
       {tab === "louah" && can("gerer_offices") && <LouahTab />}
       {tab === "portail" && can("gerer_offices") && <PortalSettingsTab />}
+      {tab === "kiddouch" && can("gerer_offices") && <KiddushAdminTab />}
     </div>
   );
 }

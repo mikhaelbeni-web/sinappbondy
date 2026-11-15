@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Armchair, CalendarDays, Clock, Flame, HeartHandshake, UserRound, Images, Droplets, Sparkles, ArrowRight, MapPin, Phone } from "lucide-react";
+import { Armchair, CalendarDays, Wine, PartyPopper, Clock, Flame, HeartHandshake, UserRound, Images, Droplets, Sparkles, ArrowRight, MapPin, Phone } from "lucide-react";
 import PortalShell from "@/components/portal/PortalShell";
 import { getPortal, upcomingEvents, upcomingHolidays, weekInfo } from "@/lib/portalServer";
 import { publishedPlans } from "@/lib/seatingServer";
@@ -37,7 +37,8 @@ export default async function PortalHome() {
     },
     { href: "/don", icon: HeartHandshake, title: "Faire un don", text: "Paiement sécurisé, reçu fiscal automatique." },
     { href: "/espace", icon: UserRound, title: "Mon espace fidèle", text: "Promesses, paiements et reçus, sans mot de passe." },
-    { href: "/horaires", icon: Clock, title: "Horaires des offices", text: "Semaine, Chabbat et heures du jour." },
+    { href: "/kiddouch", icon: Wine, title: "Parrainer un kiddouch", text: "Choisissez un Chabbat et dédiez le kiddouch ou la séouda." },
+    { href: "/salons", icon: PartyPopper, title: "Réserver les salons", text: "Mariage, Bar Mitsva, Brit Mila : envoyez votre demande." },
     { href: "/mikve", icon: Droplets, title: "Réserver le mikvé", text: "Choisissez un créneau en ligne." },
   ];
 
@@ -137,7 +138,7 @@ export default async function PortalHome() {
         {/* Actions rapides */}
         <section aria-labelledby="titre-services-en-ligne">
           <h2 id="titre-services-en-ligne" className="text-2xl font-bold text-ink">En ligne</h2>
-          <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4`}>
+          <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`}>
             {actions.map((a) => (
               <Link key={a.href} href={a.href} className="card p-5 group hover:ring-2 hover:ring-gold-sand/60 transition-shadow focus-visible:ring-2 focus-visible:ring-ink">
                 <span className="inline-flex w-11 h-11 rounded-full bg-cream items-center justify-center text-ink group-hover:bg-ink group-hover:text-white transition-colors">
