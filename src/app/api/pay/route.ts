@@ -12,13 +12,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const pledgeId = searchParams.get("pledge");
   const donorId = searchParams.get("donor");
+  const bookingId = searchParams.get("booking");
   const token = searchParams.get("t") || "";
 
   const target: PayTarget | null = pledgeId
     ? { kind: "pledge", id: pledgeId }
     : donorId
       ? { kind: "donor", id: donorId }
-      : null;
+      : bookingId
+        ? { kind: "booking", id: bookingId }
+        : null;
 
   try {
     if (!target || !verifyPayTarget(target, token)) {
@@ -41,6 +44,15 @@ export async function GET(req: NextRequest) {
       label = `${p.catalogItemName} - ${p.serviceLabel}`;
       email = p.donorEmail;
       metadata = { kind: "pledge", pledgeId: p.id, donorId: p.donorId };
+    } else if (target.kind === "booking") {
+      // Réservation de places : seulement les places de cette réservation.
+      const snap = await db.collection("pledges").where("bookingId", "==", target.id).get();
+      const open = snap.docs.map((d) => d.data() as any).filter((p) => p.status !== "annule" && remainingOf(p) > 0);
+      if (!open.length) return NextResponse.redirect(`${appUrl}/merci?deja=1`, 303);
+      amount = round2(open.reduce((s, p) => s + remainingOf(p), 0));
+      label = `${open.length} place(s) - ${open[0].serviceLabel}`;
+      email = open[0].donorEmail;
+      metadata = { kind: "booking", donorId: open[0].donorId, pledgeIds: open.map((p) => p.id).join(",") };
     } else {
       const donorSnap = await db.collection("donors").doc(target.id).get();
       if (!donorSnap.exists) return NextResponse.redirect(`${appUrl}/merci?erreur=lien`, 303);

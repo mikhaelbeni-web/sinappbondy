@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
     const snap = await ref.get();
     if (!snap.exists) return jsonError("Plan introuvable.", 404);
     const current = snap.data() as any;
-    const { name, sections, active, layout, published, salesOpen, maxPerDonor } = await req.json();
+    const { name, sections, active, layout, published, salesOpen, maxPerDonor, holdHours } = await req.json();
     const update: any = { updatedAt: new Date().toISOString() };
     // Réservation par les fidèles : publier le plan, puis ouvrir les ventes.
     if (typeof published === "boolean" || typeof salesOpen === "boolean") {
@@ -53,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
       update.published = pub;
       update.salesOpen = pub && open;
     }
+    if (holdHours !== undefined) update.holdHours = Math.min(720, Math.max(0, Math.round(Number(holdHours) || 0)));
     if (maxPerDonor !== undefined) update.maxPerDonor = Math.min(50, Math.max(1, Math.round(Number(maxPerDonor) || 6)));
     if (typeof name === "string" && name.trim()) update.name = name.trim();
     if (typeof active === "boolean") update.active = active;

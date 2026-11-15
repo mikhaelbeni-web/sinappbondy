@@ -19,6 +19,7 @@ export async function recordPayment(params: {
   date: string;
   notes?: string;
   pledgeId?: string | null;
+  pledgeIds?: string[] | null; // réservation de places : seulement ces promesses
   allocate?: boolean; // false : don libre, non affecté aux promesses
   campaignId?: string | null;
   eventId?: string | null;
@@ -38,6 +39,8 @@ export async function recordPayment(params: {
     candidateIds = [];
   } else if (params.pledgeId) {
     candidateIds = [params.pledgeId];
+  } else if (params.pledgeIds?.length) {
+    candidateIds = params.pledgeIds;
   } else {
     const snap = await db.collection("pledges").where("donorId", "==", params.donorId).get();
     candidateIds = snap.docs
@@ -187,7 +190,7 @@ function linkSecret(): string {
   return s;
 }
 
-export type PayTarget = { kind: "pledge" | "donor"; id: string };
+export type PayTarget = { kind: "pledge" | "donor" | "booking"; id: string };
 
 // Signature HMAC tronquée, réutilisée pour les liens de connexion à l'espace fidèle.
 export function signValue(value: string): string {
@@ -210,6 +213,6 @@ export function verifyPayTarget(t: PayTarget, token: string): boolean {
 
 export function payUrl(t: PayTarget): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const param = t.kind === "pledge" ? "pledge" : "donor";
+  const param = t.kind;
   return `${appUrl}/api/pay?${param}=${encodeURIComponent(t.id)}&t=${signPayTarget(t)}`;
 }
