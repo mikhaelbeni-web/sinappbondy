@@ -44,7 +44,7 @@ export default function SeatingPlanPage() {
   }, []);
 
   // Réservation par les fidèles : publication, ouverture des ventes, plafond.
-  async function setSales(patch: { published?: boolean; salesOpen?: boolean; maxPerDonor?: number }) {
+  async function setSales(patch: { published?: boolean; salesOpen?: boolean; maxPerDonor?: number; isBase?: boolean }) {
     setBusy(true);
     setMessage("");
     const res = await fetch(`/api/seating/${planId}`, {
@@ -221,6 +221,9 @@ export default function SeatingPlanPage() {
           <button className="btn-secondary" disabled={busy} onClick={() => confirmAll(true)}>Confirmer les nouvelles</button>
           <button className="btn-secondary" disabled={busy} onClick={() => confirmAll(false)}>Tout reconfirmer</button>
           {drawn && <button className="btn-secondary" onClick={() => setEditing(true)}>Modifier le plan de salle</button>}
+          {drawn && plan.layout && (plan.isBase
+            ? <button className="btn-secondary" disabled={busy} title="Les nouveaux plans ne partiront plus de celui-ci" onClick={() => setSales({ isBase: false })}>★ Plan de base (retirer)</button>
+            : <button className="btn-secondary" disabled={busy} title="Les nouveaux plans partiront d'une copie de celui-ci" onClick={() => setSales({ isBase: true })}>Définir comme plan de base</button>)}
           {!drawn && seats.length === 0 && <button className="btn-secondary" onClick={() => setEditing(true)}>Dessiner le plan de salle</button>}
           <button className="btn-secondary" onClick={() => window.print()}>Imprimer</button>
         </div>

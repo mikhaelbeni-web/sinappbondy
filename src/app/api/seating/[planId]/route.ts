@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
     const snap = await ref.get();
     if (!snap.exists) return jsonError("Plan introuvable.", 404);
     const current = snap.data() as any;
-    const { name, sections, active, layout, published, salesOpen, maxPerDonor } = await req.json();
+    const { name, sections, active, layout, published, salesOpen, maxPerDonor, isBase } = await req.json();
     const update: any = { updatedAt: new Date().toISOString() };
     // Réservation par les fidèles : publier le plan, puis ouvrir les ventes.
     if (typeof published === "boolean" || typeof salesOpen === "boolean") {
@@ -55,6 +55,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
       if (open && !pub) return jsonError("Publiez le plan avant d'ouvrir les ventes.", 400);
       update.published = pub;
       update.salesOpen = pub && open;
+    }
+    // Plan de base : celui dont partent les nouveaux plans (un seul à la fois).
+    if (typeof isBase === "boolean") {
+      if (isBase && !current.layout) return jsonError("Dessinez d'abord le plan de salle.", 400);
+      if (isBase) {
+        const others = await db.collection("seatingPlans").where("isBase", "==", true).get();
+        await Promise.all(others.docs.filter((d) => d.id !== params.planId).map((d) => d.ref.update({ isBase: false })));
+      }
+      update.isBase = isBase;
     }
     if (maxPerDonor !== undefined) update.maxPerDonor = Math.min(50, Math.max(1, Math.round(Number(maxPerDonor) || 6)));
     if (typeof name === "string" && name.trim()) update.name = name.trim();

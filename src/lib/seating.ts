@@ -24,6 +24,7 @@ export interface SeatingPlanDoc {
   layout?: RoomLayout | null; // plan dessiné (sinon grille de sections)
   drawn?: boolean; // plan créé en mode dessiné (layout peut être encore vide)
   published?: boolean; // visible dans l'espace fidèle
+  isBase?: boolean; // plan de base : point de départ proposé pour les nouveaux plans
   salesOpen?: boolean; // les fidèles peuvent réserver eux-mêmes
   maxPerDonor?: number; // places qu'une famille peut réserver elle-même
   active: boolean;
