@@ -64,8 +64,12 @@ export default async function CommunautePage() {
           <div className="card p-5">
             <Phone className="w-6 h-6 text-gold" aria-hidden />
             <h2 className="font-bold text-ink mt-2">Kiddouch, salons, Bar Mitsva</h2>
-            <p className="text-sm text-gray-600 mt-1">Pour parrainer un kiddouch, réserver les salons ou préparer une Bar Mitsva, contactez le secrétariat.</p>
-            {portal.phone && <a href={telHref(portal.phone)} className="btn-secondary mt-4">{portal.phone}</a>}
+            <p className="text-sm text-gray-600 mt-1">Parrainez un kiddouch ou demandez les salons en ligne. Pour préparer une Bar Mitsva, contactez le secrétariat.</p>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-4">
+              <Link href="/kiddouch" className="btn-primary">Parrainer un kiddouch</Link>
+              <Link href="/salons" className="btn-secondary">Réserver les salons</Link>
+              {portal.phone && <a href={telHref(portal.phone)} className="btn-secondary">{portal.phone}</a>}
+            </div>
           </div>
         </section>
       </div>

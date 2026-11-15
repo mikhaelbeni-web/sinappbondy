@@ -440,3 +440,28 @@ export async function sendMikveEmail(params: { to: string; name: string; when: s
   const from = mailer.from;
   return mailer.send({ from, to: params.to, subject, html });
 }
+
+// Message simple (confirmation de kiddouch, demande de salon) : même
+// habillage que les autres e-mails, contenu HTML déjà échappé par l'appelant.
+export async function sendNoticeEmail(params: { to: string; subject: string; bodyHtml: string; button?: { label: string; url: string } | null }) {
+  const mailer = getMailer();
+  const synagogueName = process.env.NEXT_PUBLIC_SYNAGOGUE_NAME || "La synagogue";
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #b8860b;">${escapeHtml(synagogueName)}</h2>
+      ${params.bodyHtml}
+      ${
+        params.button
+          ? `<p style="text-align:center;margin:28px 0;"><a href="${params.button.url}" style="background:#b8860b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;">${escapeHtml(params.button.label)}</a></p>`
+          : ""
+      }
+    </div>
+  `;
+  if (!mailer) {
+    console.warn("[email] envoi non configuré — message non envoyé:", { to: params.to, subject: params.subject });
+    return { sent: false as const, reason: NO_MAILER };
+  }
+  return mailer.send({ from: mailer.from, to: params.to, subject: params.subject, html });
+}
+
+export const escapeForEmail = (s: string) => escapeHtml(s);

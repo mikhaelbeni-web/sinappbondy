@@ -52,6 +52,9 @@ export default function PortalShell({ portal, children }: { portal: PortalSettin
             <ul className="space-y-1">
               <li><Link href="/don" className="tap hover:text-white">Faire un don</Link></li>
               <li><Link href="/espace" className="tap hover:text-white">Mon espace fidèle</Link></li>
+              <li><Link href="/places" className="tap hover:text-white">Réserver ma place</Link></li>
+              <li><Link href="/kiddouch" className="tap hover:text-white">Parrainer un kiddouch</Link></li>
+              <li><Link href="/salons" className="tap hover:text-white">Réserver les salons</Link></li>
               <li><Link href="/mikve" className="tap hover:text-white">Réserver le mikvé</Link></li>
             </ul>
           </nav>
