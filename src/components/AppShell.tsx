@@ -9,6 +9,7 @@ import {
   CalendarHeart,
   Droplets,
   FileCheck2,
+  Globe,
   HandCoins,
   Home,
   IdCard,
@@ -156,6 +157,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           )}
         </nav>
+        {/* Le portail public, toujours visible sous la liste, ouvert dans un
+            nouvel onglet pour garder le back-office ouvert. */}
+        <div className="px-3 md:px-[14px] py-2 border-t border-white/10">
+          <a
+            href="/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Voir le portail des fidèles (nouvel onglet)"
+            title="Voir le portail des fidèles"
+            className="flex items-center gap-3 rounded-xl px-3 py-3 md:h-11 md:py-0 md:px-[12.5px] text-sm text-gold-sand hover:bg-white/10 transition-colors"
+          >
+            <Globe size={19} className="shrink-0" aria-hidden />
+            <span className={`whitespace-nowrap ${RAIL_LABEL}`}>Voir le portail des fidèles</span>
+          </a>
+        </div>
         <div className="p-3 md:px-[18px] md:py-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-3 py-2 md:p-0" title={`${user.name}${user.role ? ` · ${user.role.name}` : ""}`}>
             <span className="grid place-items-center w-9 h-9 rounded-full bg-white/10 text-xs font-semibold shrink-0">{initials}</span>
