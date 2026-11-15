@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CalendarDays, Clock, Flame, HeartHandshake, UserRound, Images, Droplets, Sparkles, ArrowRight, MapPin, Phone } from "lucide-react";
+import { Armchair, CalendarDays, Clock, Flame, HeartHandshake, UserRound, Images, Droplets, Sparkles, ArrowRight, MapPin, Phone } from "lucide-react";
 import PortalShell from "@/components/portal/PortalShell";
 import { getPortal, upcomingEvents, upcomingHolidays, weekInfo } from "@/lib/portalServer";
+import { publishedPlans } from "@/lib/seatingServer";
 import { formatEUR } from "@/lib/format";
 import { frDay, frRange, fullAddress, mapUrl, telHref } from "@/lib/portal";
 
@@ -15,11 +16,25 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // Accueil du portail des fidèles (page publique).
 export default async function PortalHome() {
-  const [portal, week, events] = await Promise.all([getPortal(), weekInfo().catch(() => null), upcomingEvents(3).catch(() => [])]);
+  const [portal, week, events, plans] = await Promise.all([
+    getPortal(),
+    weekInfo().catch(() => null),
+    upcomingEvents(3).catch(() => []),
+    publishedPlans().catch(() => []),
+  ]);
+  // Le bouton du bandeau n'apparaît que lorsqu'un plan a ses ventes ouvertes ;
+  // la carte « Réserver ma place » de la rubrique En ligne est toujours là.
+  const openPlan = plans.find((p) => p.salesOpen);
   const holidays = upcomingHolidays(120);
   const nextHoliday = holidays[0];
 
   const actions = [
+    {
+      href: "/places",
+      icon: Armchair,
+      title: "Réserver ma place",
+      text: openPlan ? `${openPlan.name} : choisissez vos places sur le plan.` : "Places des fêtes, à choisir sur le plan de la synagogue.",
+    },
     { href: "/don", icon: HeartHandshake, title: "Faire un don", text: "Paiement sécurisé, reçu fiscal automatique." },
     { href: "/espace", icon: UserRound, title: "Mon espace fidèle", text: "Promesses, paiements et reçus, sans mot de passe." },
     { href: "/horaires", icon: Clock, title: "Horaires des offices", text: "Semaine, Chabbat et heures du jour." },
@@ -44,6 +59,11 @@ export default async function PortalHome() {
             <Link href="/don" className="btn bg-gold-sand text-ink-dark hover:bg-gold-light px-6 py-3 text-base">
               <HeartHandshake className="w-5 h-5" aria-hidden /> Faire un don
             </Link>
+            {openPlan && (
+              <Link href="/places" className="btn bg-white text-ink hover:bg-cream px-6 py-3 text-base">
+                <Armchair className="w-5 h-5" aria-hidden /> Réserver ma place
+              </Link>
+            )}
             <Link href="/horaires" className="btn border-2 border-white/70 text-white hover:bg-white/10 px-6 py-3 text-base">
               <Clock className="w-5 h-5" aria-hidden /> Horaires des offices
             </Link>
@@ -117,7 +137,7 @@ export default async function PortalHome() {
         {/* Actions rapides */}
         <section aria-labelledby="titre-services-en-ligne">
           <h2 id="titre-services-en-ligne" className="text-2xl font-bold text-ink">En ligne</h2>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4`}>
             {actions.map((a) => (
               <Link key={a.href} href={a.href} className="card p-5 group hover:ring-2 hover:ring-gold-sand/60 transition-shadow focus-visible:ring-2 focus-visible:ring-ink">
                 <span className="inline-flex w-11 h-11 rounded-full bg-cream items-center justify-center text-ink group-hover:bg-ink group-hover:text-white transition-colors">
