@@ -21,7 +21,18 @@ export async function GET() {
       .map((d) => d.data() as any)
       .sort((a, b) => (a.date < b.date ? 1 : -1))
       .map((e) => ({ ...e, ...(stats[e.id] || { qty: 0, amount: 0, checkedIn: 0 }), url: `${appUrl}/evenement/${e.slug}` }));
-    return NextResponse.json({ events });
+    // Kiddouch parrainés (payés) et salons confirmés : agenda en lecture seule,
+    // jamais publié sur le portail (événements privés des familles).
+    const today = new Date().toISOString().slice(0, 10);
+    const [kid, sal] = await Promise.all([
+      adminDb().collection("kiddushSponsors").where("date", ">=", today).get().then((s) => s.docs.map((d) => d.data() as any)).catch(() => []),
+      adminDb().collection("salonRequests").where("date", ">=", today).get().then((s) => s.docs.map((d) => d.data() as any)).catch(() => []),
+    ]);
+    const reservations = [
+      ...kid.filter((k) => !k.pending).map((k) => ({ id: `k_${k.id}`, kind: "kiddouch", date: k.date, title: `${k.optionLabel} · Chabbat ${k.parasha}`, who: k.donorName, detail: k.dedication || "" })),
+      ...sal.filter((r) => r.status === "confirmee").map((r) => ({ id: `s_${r.id}`, kind: "salon", date: r.date, title: `Salons · ${r.eventType}`, who: r.name, detail: `${r.guests} invités · ${r.phone}` })),
+    ].sort((a, b) => (a.date < b.date ? -1 : 1));
+    return NextResponse.json({ events, reservations });
   } catch (err) {
     return handleApiError(err);
   }

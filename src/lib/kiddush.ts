@@ -1,6 +1,6 @@
 // Parrainage du kiddouch / de la séouda chlichit et demandes de réservation
 // des salons. Fichier sans Admin SDK : importable côté client.
-// Réglages (prix, textes) : Administration > Kiddouch & salons.
+// Réglages (prix, textes) : menu Kiddouch & salons du back-office.
 
 export interface KiddushOption {
   key: string; // ex : kiddouch, seouda

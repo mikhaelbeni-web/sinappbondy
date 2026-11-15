@@ -3,15 +3,16 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { escapeForEmail, sendNoticeEmail } from "@/lib/email";
 import { SALON_STATUS_LABELS } from "@/lib/kiddush";
-import { getKiddushSettings } from "@/lib/kiddushServer";
+import { getKiddushSettings, settlePendingKiddush } from "@/lib/kiddushServer";
 
 export const dynamic = "force-dynamic";
 
-// Administration > Kiddouch & salons : réglages, parrainages, demandes.
+// Back-office, menu Kiddouch & salons : réglages, parrainages, demandes.
 export async function GET() {
   try {
     await withPermission("gerer_offices");
     const db = adminDb();
+    await settlePendingKiddush().catch((e) => console.error("[kiddush] gardes", e));
     const from = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
     const [settings, sponsors, salons] = await Promise.all([
       getKiddushSettings(),

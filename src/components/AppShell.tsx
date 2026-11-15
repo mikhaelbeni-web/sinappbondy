@@ -24,6 +24,7 @@ import {
   Sofa,
   Users,
   Wallet,
+  Wine,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -51,6 +52,7 @@ const NAV: NavItem[] = [
   { href: "/services", label: "Offices", icon: CalendarDays, perm: null },
   { href: "/seating", label: "Places des fêtes", icon: Sofa, perm: "gerer_paiements" },
   { href: "/events", label: "Événements", icon: Wallet, perm: "gerer_paiements" },
+  { href: "/kiddouch-salons", label: "Kiddouch & salons", icon: Wine, perm: "gerer_offices" },
   { href: "/hazkarot", label: "Hazkarot", icon: CalendarHeart, perm: null },
   { href: "/mikve-reservations", label: "Mikvé", icon: Droplets, perm: "gerer_offices" },
   { href: "/catalog", label: "Catalogue", icon: LayoutGrid, perm: "gerer_catalogue" },

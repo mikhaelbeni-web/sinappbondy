@@ -67,7 +67,7 @@ export async function GET() {
             .map((x) => x.data() as any)
             .filter((k) => k.date >= today)
             .sort((a, b) => (a.date < b.date ? -1 : 1))
-            .map((k) => ({ id: k.id, date: k.date, parasha: k.parasha, label: k.optionLabel, dedication: k.dedication || "" }))
+            .map((k) => ({ id: k.id, date: k.date, parasha: k.parasha, label: k.optionLabel, dedication: k.dedication || "", pending: !!k.pending }))
         )
         .catch(() => []),
       d.email

@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         ? sendNoticeEmail({
             to: notify,
             subject: `Demande de salon : ${eventType} le ${date}`,
-            bodyHtml: `${summary}<p>${escapeForEmail(name)} · ${escapeForEmail(phone)} · ${escapeForEmail(email)}</p>${body.message ? `<p>${escapeForEmail(str(body.message, 1000))}</p>` : ""}<p>À traiter dans Administration &gt; Kiddouch &amp; salons.</p>`,
+            bodyHtml: `${summary}<p>${escapeForEmail(name)} · ${escapeForEmail(phone)} · ${escapeForEmail(email)}</p>${body.message ? `<p>${escapeForEmail(str(body.message, 1000))}</p>` : ""}<p>À traiter dans le menu Kiddouch &amp; salons de l'espace membre.</p>`,
           }).catch(() => null)
         : null,
     ]);
