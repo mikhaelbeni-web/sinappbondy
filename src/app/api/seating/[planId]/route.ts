@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { paidOf, remainingOf } from "@/lib/format";
-import { cleanSections } from "@/lib/seating";
+import { cleanSections, findPlanSeat, isDrawn } from "@/lib/seating";
+import { cleanLayout } from "@/lib/roomLayout";
 
 // Plan + places attribuées (avec état de paiement de la promesse liée).
 export async function GET(_req: NextRequest, { params }: { params: { planId: string } }) {
@@ -38,12 +39,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { planId: st
     await withPermission("gerer_paiements");
     const db = adminDb();
     const ref = db.collection("seatingPlans").doc(params.planId);
-    if (!(await ref.get()).exists) return jsonError("Plan introuvable.", 404);
-    const { name, sections, active } = await req.json();
+    const snap = await ref.get();
+    if (!snap.exists) return jsonError("Plan introuvable.", 404);
+    const current = snap.data() as any;
+    const { name, sections, active, layout } = await req.json();
     const update: any = { updatedAt: new Date().toISOString() };
     if (typeof name === "string" && name.trim()) update.name = name.trim();
     if (typeof active === "boolean") update.active = active;
-    if (sections !== undefined) {
+    if (layout !== undefined) {
+      // Plan dessiné (ou passage d'une grille vide au dessin). Chaque place
+      // déjà attribuée doit rester à sa position, avec le même tarif.
+      const seats = (await db.collection("seats").where("planId", "==", params.planId).get()).docs.map((d) => d.data() as any);
+      if (!isDrawn(current) && seats.length) return jsonError("Ce plan a déjà des places attribuées : il ne peut pas passer au plan dessiné.", 400);
+      const cleanSecs = cleanSections(sections ?? current.sections, true);
+      if (!cleanSecs) return jsonError("Tarifs invalides.", 400);
+      const res = cleanLayout(layout, cleanSecs.map((s) => s.id));
+      if ("error" in res) return jsonError(res.error, 400);
+      const next = { sections: cleanSecs, layout: res.layout, drawn: true };
+      for (const s of seats) {
+        if (!findPlanSeat(next, s.sectionId, s.row, s.seat)) {
+          return jsonError(`Impossible : la place de ${s.donorName} disparaîtrait ou changerait de tarif. Libérez-la d'abord.`, 400);
+        }
+      }
+      Object.assign(update, next);
+    } else if (sections !== undefined && isDrawn(current)) {
+      return jsonError("Modifiez les tarifs d'un plan dessiné depuis l'éditeur.", 400);
+    } else if (sections !== undefined) {
       const clean = cleanSections(sections);
       if (!clean) return jsonError("Sections invalides.", 400);
       const seats = (await db.collection("seats").where("planId", "==", params.planId).get()).docs.map((d) => d.data() as any);

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { formatEUR } from "@/lib/format";
-import { rowLetter, seatId, seatLabel } from "@/lib/seating";
+import { isDrawn, planCapacity, planSeatLabel, rowLetter, seatId, type SeatSection } from "@/lib/seating";
+import type { LayoutSeat, RoomLayout } from "@/lib/roomLayout";
+import RoomPlanView from "@/components/RoomPlanView";
+import PlanEditorModal from "@/components/PlanEditorModal";
 import { filterByQuery } from "@/lib/search";
 
 interface Donor { id: string; firstName: string; lastName: string; }
@@ -29,6 +32,28 @@ export default function SeatingPlanPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const search = useSearchParams();
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (search.get("edit")) {
+      setEditing(true);
+      window.history.replaceState(null, "", `/seating/${planId}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function saveLayout(layout: RoomLayout, sections: SeatSection[]): Promise<string | null> {
+    const res = await fetch(`/api/seating/${planId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layout, sections }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) return d.error || "Enregistrement impossible.";
+    await load();
+    return null;
+  }
 
   async function load() {
     const [pRes, dRes] = await Promise.all([fetch(`/api/seating/${planId}`), fetch("/api/donors")]);
@@ -144,7 +169,24 @@ export default function SeatingPlanPage() {
 
   if (!plan) return <p className="text-gray-500">Chargement…</p>;
 
-  const capacity = plan.sections.reduce((s: number, x: any) => s + x.rows * x.seatsPerRow, 0);
+  const capacity = planCapacity(plan);
+  const drawn = isDrawn(plan);
+  const label = (s: { sectionId: string; row: number; seat: number }) => planSeatLabel(plan, s.sectionId, s.row, s.seat);
+  const lookOf = (s: LayoutSeat) => {
+    const taken = byId.get(seatId(planId, s.sectionId, s.rowNum, s.k + 1));
+    const isSel = selected.some((x) => x.sectionId === s.sectionId && x.row === s.rowNum && x.seat === s.k + 1);
+    const hl = !!(highlight && taken && taken.donorName.toLowerCase().includes(highlight.toLowerCase()));
+    const sec = plan.sections.find((x: any) => x.id === s.sectionId);
+    const name = `${s.letter}${s.number}`;
+    if (isSel) return { fill: "#b8893a", stroke: "#8a6633", text: s.number, textColor: "#fff", title: `${name} · sélectionnée`, ring: hl };
+    if (taken)
+      return taken.remaining > 0
+        ? { fill: "#fef3c7", stroke: "#f59e0b", text: s.number, textColor: "#78350f", title: `${name} · ${taken.donorName} · à régler`, ring: hl }
+        : { fill: "#dcfce7", stroke: "#22c55e", text: s.number, textColor: "#14532d", title: `${name} · ${taken.donorName}`, ring: hl };
+    return { fill: "#ffffff", stroke: "#9ca3af", text: s.number, textColor: "#374151", title: `${name} · libre${sec ? ` · ${sec.name}${sec.price > 0 ? ` ${formatEUR(sec.price)}` : ""}` : ""}` };
+  };
+  const locked: Record<string, string> = {};
+  if (drawn) for (const s of seats) locked[`${s.row}:${s.seat - 1}`] = s.donorName;
   const families = new Set(seats.map((s) => s.donorId)).size;
   const due = seats.reduce((s, x) => s + x.remaining, 0);
   const hasPaid = seats.some((s) => s.pledgeId && s.paid > 0);
@@ -162,6 +204,8 @@ export default function SeatingPlanPage() {
         <div className="flex flex-wrap gap-2">
           <button className="btn-secondary" disabled={busy} onClick={() => confirmAll(true)}>Confirmer les nouvelles</button>
           <button className="btn-secondary" disabled={busy} onClick={() => confirmAll(false)}>Tout reconfirmer</button>
+          {drawn && <button className="btn-secondary" onClick={() => setEditing(true)}>Modifier le plan de salle</button>}
+          {!drawn && seats.length === 0 && <button className="btn-secondary" onClick={() => setEditing(true)}>Dessiner le plan de salle</button>}
           <button className="btn-secondary" onClick={() => window.print()}>Imprimer</button>
         </div>
       </div>
@@ -181,7 +225,7 @@ export default function SeatingPlanPage() {
           {focus ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
               <p>
-                <strong>{seatLabel(plan.sections.find((s: any) => s.id === focus.sectionId)?.name || "", focus.row, focus.seat)}</strong> :{" "}
+                <strong>{label(focus)}</strong> :{" "}
                 <Link href={`/donors/${focus.donorId}`} className="text-gold hover:underline tap">{focus.donorName}</Link>
                 {focus.pledgeId ? (focus.remaining > 0 ? ` · reste ${formatEUR(focus.remaining)}` : " · réglée") : " · offerte"}
                 {focus.confirmedAt ? " · confirmée" : ""}
@@ -192,7 +236,7 @@ export default function SeatingPlanPage() {
             <>
               <p className="text-sm">
                 {selected.length} place(s) :{" "}
-                {selected.map((s) => seatLabel(plan.sections.find((x: any) => x.id === s.sectionId)?.name || "", s.row, s.seat)).join(", ")}
+                {selected.map(label).join(", ")}
               </p>
               <div className="relative">
                 <input
@@ -226,7 +270,7 @@ export default function SeatingPlanPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <label className="tap flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={bill} onChange={(e) => setBill(e.target.checked)} />
-                  Facturer au tarif de la section
+                  {drawn ? "Facturer au tarif de la rangée" : "Facturer au tarif de la section"}
                 </label>
                 <button className="btn-gold" disabled={busy || !donorId} onClick={assign}>Attribuer</button>
                 <button className="btn-secondary" onClick={() => setSelected([])}>Annuler</button>
@@ -236,7 +280,38 @@ export default function SeatingPlanPage() {
         </div>
       )}
 
-      {plan.sections.map((sec: any) => (
+      {drawn && (
+        <div className="card p-4 space-y-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+            {plan.sections.map((s: any) => (
+              <span key={s.id}><strong className="text-ink">{s.name}</strong> : {s.price > 0 ? `${formatEUR(s.price)} la place` : "gratuit"}</span>
+            ))}
+          </div>
+          {plan.layout ? (
+            <div className="overflow-x-auto">
+              <RoomPlanView layout={plan.layout} look={lookOf} onSeat={(s) => click(s.sectionId, s.rowNum, s.k + 1)} />
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>Ce plan n'est pas encore dessiné.</p>
+              <button className="btn-gold" onClick={() => setEditing(true)}>Dessiner le plan de salle</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {editing && (
+        <PlanEditorModal
+          name={plan.name}
+          layout={plan.layout || null}
+          sections={plan.sections}
+          locked={locked}
+          onSave={saveLayout}
+          onClose={() => setEditing(false)}
+        />
+      )}
+
+      {!drawn && plan.sections.map((sec: any) => (
         <div key={sec.id} className="card p-4 space-y-3 break-inside-avoid">
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="font-semibold text-ink">{sec.name}</h2>

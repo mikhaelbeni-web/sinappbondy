@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const DEFAULT_SECTIONS = [
@@ -18,6 +19,9 @@ export default function SeatingPage() {
   const [sections, setSections] = useState(DEFAULT_SECTIONS);
   const [error, setError] = useState("");
   const [deleted, setDeleted] = useState("");
+  const [drawn, setDrawn] = useState(true);
+  const [tariffs, setTariffs] = useState([{ id: "places", name: "Places", price: 0 }]);
+  const router = useRouter();
 
   async function load() {
     const res = await fetch("/api/seating");
@@ -41,11 +45,15 @@ export default function SeatingPage() {
     const res = await fetch("/api/seating", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, year, sections }),
+      body: JSON.stringify(drawn ? { name, year, drawn: true, sections: tariffs } : { name, year, sections }),
     });
     const data = await res.json();
     if (!res.ok) {
       setError(data.error);
+      return;
+    }
+    if (drawn) {
+      router.push(`/seating/${data.plan.id}?edit=1`);
       return;
     }
     setShow(false);
@@ -79,8 +87,41 @@ export default function SeatingPage() {
               <input type="number" className="input" value={year} onChange={(e) => setYear(Number(e.target.value))} />
             </div>
           </div>
-          <p className="label">Sections</p>
-          {sections.map((s, i) => (
+          <fieldset className="space-y-2">
+            <legend className="label">Type de plan</legend>
+            <label className="tap flex items-start gap-2 text-sm">
+              <input type="radio" name="kind" checked={drawn} onChange={() => setDrawn(true)} className="mt-1" />
+              <span><strong>Plan de salle dessiné</strong> : murs, Aron, téva, portes et rangées placées comme dans votre synagogue. Vous le dessinez juste après.</span>
+            </label>
+            <label className="tap flex items-start gap-2 text-sm">
+              <input type="radio" name="kind" checked={!drawn} onChange={() => setDrawn(false)} className="mt-1" />
+              <span><strong>Grille simple</strong> : sections de N rangs × M places.</span>
+            </label>
+          </fieldset>
+          {drawn && (
+            <>
+              <p className="label">Tarifs</p>
+              {tariffs.map((s, i) => (
+                <div key={s.id} className="grid grid-cols-3 gap-2 items-end">
+                  <div className="col-span-2">
+                    <label className="text-xs text-gray-500" htmlFor={`tn${i}`}>Nom</label>
+                    <input id={`tn${i}`} className="input" value={s.name} onChange={(e) => setTariffs(tariffs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500" htmlFor={`tp${i}`}>Tarif (€)</label>
+                    <input id={`tp${i}`} type="number" min="0" className="input" value={s.price} onChange={(e) => setTariffs(tariffs.map((x, j) => (j === i ? { ...x, price: Number(e.target.value) } : x)))} />
+                  </div>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-secondary text-sm" onClick={() => setTariffs([...tariffs, { id: `t${Date.now().toString(36)}`, name: "Femmes", price: 0 }])}>+ Tarif</button>
+                {tariffs.length > 1 && <button type="button" className="btn-secondary text-sm" onClick={() => setTariffs(tariffs.slice(0, -1))}>Retirer le dernier</button>}
+              </div>
+              <p className="text-xs text-gray-500">Dans l'éditeur, chaque rangée suit l'un de ces tarifs. Vous pourrez les modifier ensuite.</p>
+            </>
+          )}
+          {!drawn && <p className="label">Sections</p>}
+          {!drawn && sections.map((s, i) => (
             <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
               <div className="col-span-2 sm:col-span-2">
                 <label className="text-xs text-gray-500">Nom</label>
@@ -100,7 +141,7 @@ export default function SeatingPage() {
               </div>
             </div>
           ))}
-          <div className="flex flex-wrap gap-2">
+          {!drawn && <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="btn-secondary text-sm"
@@ -113,8 +154,8 @@ export default function SeatingPage() {
                 Retirer la dernière
               </button>
             )}
-          </div>
-          <button type="submit" className="btn-primary">Créer le plan</button>
+          </div>}
+          <button type="submit" className="btn-primary">{drawn ? "Créer et dessiner le plan" : "Créer le plan"}</button>
         </form>
       )}
 
@@ -124,7 +165,7 @@ export default function SeatingPage() {
           <Link key={p.id} href={`/seating/${p.id}`} className="p-4 flex items-center justify-between gap-3 hover:bg-gray-50 text-sm">
             <div className="min-w-0">
               <p className="font-medium text-ink">{p.name}</p>
-              <p className="text-gray-500">{p.sections.map((s: any) => s.name).join(" · ")}</p>
+              <p className="text-gray-500">{p.drawn || p.layout ? "Plan dessiné · " : ""}{p.sections.map((s: any) => s.name).join(" · ")}</p>
             </div>
             <span className="shrink-0 text-gray-600">
               {p.assigned} / {p.capacity} places
