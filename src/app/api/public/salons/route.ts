@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (!s.salonsEnabled) return jsonError("Les demandes en ligne sont fermées pour le moment.", 403);
     const date = str(body.date, 10);
     const name = str(body.name, 120);
-    const email = str(body.email, 120);
+    const email = str(body.email, 120).toLowerCase();
     const phone = str(body.phone, 30);
     const eventType = s.salonEventTypes.includes(body.eventType) ? body.eventType : "";
     const guests = Math.round(Number(body.guests) || 0);

@@ -4,6 +4,18 @@ import { Suspense, useEffect, useState } from "react";
 import PublicPage from "@/components/PublicPage";
 import { useSearchParams } from "next/navigation";
 import { formatEUR, formatDate, METHOD_LABELS, STATUS_LABELS } from "@/lib/format";
+import { SALON_STATUS_LABELS } from "@/lib/kiddush";
+
+const frDay = (d: string) =>
+  new Date(`${d}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+const SHORTCUTS = [
+  { href: "/places", label: "Places des fêtes" },
+  { href: "/kiddouch", label: "Parrainer un kiddouch" },
+  { href: "/salons", label: "Réserver les salons" },
+  { href: "/mikve", label: "Mikvé" },
+  { href: "/horaires", label: "Horaires" },
+];
 
 // Espace fidèle : promesses, paiements, reçus fiscaux et règlement en ligne.
 export default function EspacePage() {
@@ -22,10 +34,13 @@ function EspaceInner() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(searchParams.get("expire") ? "Ce lien a expiré : demandez-en un nouveau." : "");
 
-  useEffect(() => {
+  const load = () =>
     fetch("/api/espace/me")
       .then(async (r) => (r.ok ? setData(await r.json()) : null))
       .finally(() => setLoading(false));
+
+  useEffect(() => {
+    load();
   }, []);
 
   async function requestLink(e: React.FormEvent) {
@@ -76,7 +91,7 @@ function EspaceInner() {
             )}
           </div>
           <p className="text-center text-sm text-gray-500 mt-4">
-            <a href="/don" className="text-gold hover:underline tap">Faire un don</a>
+            <a href="/" className="text-gold hover:underline tap">Accueil</a> · <a href="/don" className="text-gold hover:underline tap">Faire un don</a>
           </p>
         </div>
       </div>
@@ -96,6 +111,13 @@ function EspaceInner() {
         </button>
       }
     >
+
+        <nav aria-label="Services en ligne" className="card p-3 flex flex-wrap gap-2">
+          <a href="/" className="chip">← Accueil</a>
+          {SHORTCUTS.map((s) => (
+            <a key={s.href} href={s.href} className="chip">{s.label}</a>
+          ))}
+        </nav>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="card p-4">
@@ -130,6 +152,61 @@ function EspaceInner() {
           </div>
         )}
 
+        {data.seats?.length > 0 && (
+          <Section title="Mes places">
+            {data.seats.map((s: any) => (
+              <div key={s.id} className="p-4 flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0">
+                  <span className="font-medium text-ink">{s.label}</span>
+                  <span className="text-gray-500"> · {s.plan}</span>
+                </span>
+                <span className={`text-xs shrink-0 ${s.pending ? "text-amber-700" : "text-green-700"}`}>{s.pending ? "en attente de paiement" : "réservée"}</span>
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {data.kiddush?.length > 0 && (
+          <Section title="Mes parrainages">
+            {data.kiddush.map((k: any) => (
+              <div key={k.id} className="p-4 text-sm">
+                <p className="font-medium text-ink">{k.label} · Chabbat {k.parasha}</p>
+                <p className="text-gray-500 first-letter:uppercase">{frDay(k.date)}{k.dedication ? ` · ${k.dedication}` : ""}</p>
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {data.salons?.length > 0 && (
+          <Section title="Mes demandes de salon">
+            {data.salons.map((r: any) => (
+              <div key={r.id} className="p-4 flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{r.eventType} · {r.guests} invités</p>
+                  <p className="text-gray-500 first-letter:uppercase">{frDay(r.date)}</p>
+                </div>
+                <span className={`text-xs shrink-0 ${r.status === "confirmee" ? "text-green-700" : r.status === "refusee" ? "text-red-700" : "text-amber-700"}`}>
+                  {r.status === "nouvelle" ? "En attente de réponse" : SALON_STATUS_LABELS[r.status] || r.status}
+                </span>
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {data.hazkarot?.length > 0 && (
+          <Section title="Mes hazkarot">
+            {data.hazkarot.map((h: any) => (
+              <div key={h.id} className="p-4 text-sm">
+                <p className="font-medium text-ink">{h.name}{h.relation ? ` (${h.relation})` : ""}</p>
+                <p className="text-gray-500">
+                  {h.hebrewDate}
+                  {h.next ? ` · prochaine hazkara le ${frDay(h.next)}` : ""}
+                </p>
+              </div>
+            ))}
+          </Section>
+        )}
+
         <Section title="Mes promesses">
           {data.pledges.length === 0 && <Empty>Aucune promesse.</Empty>}
           {data.pledges.map((p: any) => (
@@ -150,7 +227,7 @@ function EspaceInner() {
 
         <Section title="Mes reçus fiscaux">
           {data.receipts.length === 0 && (
-            <Empty>{data.donor.hasAddress ? "Aucun reçu pour l'instant." : "Aucun reçu : communiquez votre adresse postale à la synagogue pour en recevoir."}</Empty>
+            <Empty>{data.donor.hasAddress ? "Aucun reçu pour l'instant." : "Aucun reçu : ajoutez votre adresse postale dans « Mes coordonnées », plus bas, pour en recevoir."}</Empty>
           )}
           {data.receipts.map((r: any) => (
             <div key={r.id} className="p-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
@@ -176,7 +253,75 @@ function EspaceInner() {
             </div>
           ))}
         </Section>
+        <AddressForm donor={data.donor} onSaved={load} />
     </PublicPage>
+  );
+}
+
+// Coordonnées : l'adresse postale est obligatoire sur un reçu fiscal.
+function AddressForm({ donor, onSaved }: { donor: any; onSaved: () => void }) {
+  const [open, setOpen] = useState(!donor.hasAddress);
+  const [f, setF] = useState({ address: donor.address || "", postalCode: donor.postalCode || "", city: donor.city || "", phone: donor.phone || "" });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMsg(null);
+    const res = await fetch("/api/espace/me", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
+    const d = await res.json().catch(() => ({}));
+    setMsg(res.ok ? { ok: true, text: "Coordonnées enregistrées." } : { ok: false, text: d.error || "Enregistrement impossible." });
+    setSaving(false);
+    if (res.ok) {
+      setOpen(false);
+      onSaved();
+    }
+  }
+
+  return (
+    <div className="card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-semibold text-ink">Mes coordonnées</h2>
+          <p className="text-sm text-gray-600 break-words">
+            {donor.hasAddress ? `${donor.address}, ${donor.postalCode} ${donor.city}` : "Ajoutez votre adresse postale : elle est obligatoire pour recevoir un reçu fiscal."}
+          </p>
+          <p className="text-sm text-gray-600 break-words">{donor.email}{donor.phone ? ` · ${donor.phone}` : ""}</p>
+        </div>
+        {!open && (
+          <button type="button" className="btn-secondary shrink-0" onClick={() => setOpen(true)}>Modifier</button>
+        )}
+      </div>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.text}</p>}
+      {open && (
+        <form onSubmit={save} className="space-y-3">
+          <div>
+            <label className="label" htmlFor="esp-address">Adresse</label>
+            <input id="esp-address" className="input" autoComplete="street-address" required value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="label" htmlFor="esp-cp">Code postal</label>
+              <input id="esp-cp" className="input" autoComplete="postal-code" inputMode="numeric" required value={f.postalCode} onChange={(e) => setF({ ...f, postalCode: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="esp-city">Ville</label>
+              <input id="esp-city" className="input" autoComplete="address-level2" required value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="label" htmlFor="esp-phone">Téléphone (facultatif)</label>
+            <input id="esp-phone" type="tel" className="input" autoComplete="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button type="submit" className="btn-gold" disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
+            {donor.hasAddress && <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>Annuler</button>}
+          </div>
+          <p className="text-xs text-gray-500">Pour changer de nom ou d'e-mail, contactez la synagogue.</p>
+        </form>
+      )}
+    </div>
   );
 }
 
