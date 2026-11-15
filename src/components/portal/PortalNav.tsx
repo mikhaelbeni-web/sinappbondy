@@ -14,7 +14,7 @@ import { PORTAL_LINKS } from "@/lib/portal";
 export default function PortalNav({ name, tagline }: { name: string; tagline: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { needsSetup, loading, user } = useAuth();
+  const { needsSetup, loading } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Première installation : l'assistant de configuration reste prioritaire.
@@ -31,16 +31,6 @@ export default function PortalNav({ name, tagline }: { name: string; tagline: st
       <a href="#contenu" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 btn-primary">
         Aller au contenu
       </a>
-      {user && (
-        <div className="bg-ink text-white text-xs">
-          <div className="max-w-6xl mx-auto px-4 py-1.5 flex items-center justify-between gap-3">
-            <span className="truncate">Connecté en tant que membre de l'équipe</span>
-            <Link href="/dashboard" className="tap font-semibold underline underline-offset-2 shrink-0">
-              Tableau de bord
-            </Link>
-          </div>
-        </div>
-      )}
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="min-w-0 tap">
           <span className="block font-bold text-ink leading-tight truncate">{name}</span>
