@@ -238,6 +238,7 @@ export async function confirmCheckout(checkoutId: string): Promise<boolean> {
       id: paymentId,
       donorId,
       pledgeId: m.pledgeId || null,
+      pledgeIds: m.pledgeIds ? String(m.pledgeIds).split(",").filter(Boolean) : null,
       // Un don libre ou un billet ne vient pas solder les promesses du fidèle.
       allocate: !isDonation && !isTicket,
       campaignId: m.campaignId || null,
