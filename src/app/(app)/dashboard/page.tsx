@@ -25,7 +25,8 @@ interface DashboardData {
 const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
 function compactEUR(n: number) {
-  if (n >= 10000) return `${(n / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 2 })}k €`;
+  // Montant arrondi à l'euro au-delà de 10 000 € (« 13 480 € »), au lieu de « 13,48k € ».
+  if (n >= 10000) return n.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
   return formatEUR(n);
 }
 

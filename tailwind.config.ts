@@ -1,15 +1,16 @@
 import type { Config } from "tailwindcss";
 
 // Palette : bleu nuit (menu, titres, actions), doré sable (accents),
-// fond gris bleuté. Les noms ink / gold / cream sont gardés pour que
-// toutes les pages suivent sans réécriture.
+// fond gris bleuté. Doré par défaut assombri (#8a6633) pour un contraste
+// texte ≥ 4,5:1 sur blanc et sur le fond (WCAG AA). Les noms ink / gold /
+// cream sont gardés pour que toutes les pages suivent sans réécriture.
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
         ink: { DEFAULT: "#0b2e6f", dark: "#071a46", light: "#1a46a0" },
-        gold: { DEFAULT: "#9c7640", light: "#e8d7bb", sand: "#c9a46c", dark: "#7a5a2e" },
+        gold: { DEFAULT: "#8a6633", light: "#e8d7bb", sand: "#c9a46c", dark: "#7a5a2e" },
         cream: "#f3f5fa",
       },
       fontFamily: {

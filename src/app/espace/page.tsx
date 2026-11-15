@@ -65,11 +65,11 @@ function EspaceInner() {
               </p>
             ) : (
               <form onSubmit={requestLink} className="space-y-4">
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
                 <p className="text-sm text-gray-600">Saisissez l'e-mail communiqué à la synagogue : vous recevrez un lien de connexion, sans mot de passe.</p>
                 <div>
-                  <label className="label">E-mail</label>
-                  <input type="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
+                  <label htmlFor="espace-email" className="label">E-mail</label>
+                  <input id="espace-email" type="email" autoComplete="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
                 </div>
                 <button type="submit" className="btn-gold w-full">Recevoir mon lien</button>
               </form>
@@ -88,7 +88,7 @@ function EspaceInner() {
   return (
     <PublicPage
       width="max-w-2xl"
-      title={`Chalom ${data.donor.firstName} ${data.donor.lastName}`}
+      title={`Chalom ${data.donor.firstName || data.donor.lastName}`}
       subtitle={name}
       aside={
         <button onClick={logout} className="tap text-sm text-white/80 hover:text-white shrink-0">
