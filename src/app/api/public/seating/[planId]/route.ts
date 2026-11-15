@@ -5,12 +5,15 @@ import { findDonorsByEmail } from "@/lib/donors";
 import { DONOR_COOKIE, DONOR_COOKIE_OPTIONS, createDonorToken, currentDonorId } from "@/lib/donorSession";
 import { sendSeatConfirmationEmail } from "@/lib/email";
 import { payUrl } from "@/lib/payments";
-import { bookSeats } from "@/lib/seatingServer";
+import { HOLD_MINUTES, ONLINE_DONOR_NOTE, bookSeats, settleBooking, settlePendingSeats } from "@/lib/seatingServer";
+import type { SeatingPlanDoc } from "@/lib/seating";
 
 // Réservation sans compte : le visiteur a choisi ses places, il donne son
-// nom et son e-mail. La fiche du fidèle est retrouvée par e-mail ou créée,
-// les places et les sommes dues lui sont rattachées, et il reçoit un e-mail
-// avec ses places, le lien de règlement et l'accès à son espace.
+// nom et son e-mail. La fiche du fidèle est retrouvée par e-mail ou créée.
+// Places gratuites : réservées aussitôt, e-mail de confirmation envoyé.
+// Places payantes : seulement gardées HOLD_MINUTES, le visiteur est envoyé
+// au paiement ; elles ne sont réservées (et confirmées par e-mail) qu'une
+// fois payées, sinon elles sont remises en vente.
 // Une fiche existante n'est jamais ouverte ici (pas de cookie) : seul le
 // lien envoyé à son adresse y donne accès.
 export async function POST(req: NextRequest, { params }: { params: { planId: string } }) {
@@ -21,6 +24,10 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
     const db = adminDb();
 
     let donorId = currentDonorId();
+    if (donorId && !(await db.collection("donors").doc(donorId).get()).exists) donorId = null;
+    // Gardes expirées : à libérer avant de regarder ce qui est libre.
+    const plan = (await db.collection("seatingPlans").doc(params.planId).get()).data() as SeatingPlanDoc | undefined;
+    if (plan) await settlePendingSeats(plan).catch((e) => console.error("[seating] gardes", e));
     let created = false;
     if (!donorId) {
       const firstName = str(body.firstName, 80);
@@ -32,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
       else {
         const now = new Date().toISOString();
         const ref = db.collection("donors").doc();
-        await ref.set({ id: ref.id, firstName, lastName, email, phone: str(body.phone, 30), address: "", postalCode: "", city: "", notes: "Créé par une réservation de places en ligne", createdAt: now, updatedAt: now });
+        await ref.set({ id: ref.id, firstName, lastName, email, phone: str(body.phone, 30), address: "", postalCode: "", city: "", notes: ONLINE_DONOR_NOTE, createdAt: now, updatedAt: now });
         donorId = ref.id;
         created = true;
       }
@@ -48,11 +55,19 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
     }
 
     let url: string | null = null;
-    try {
-      if (result.total > 0) url = payUrl({ kind: "booking", id: result.bookingId });
-    } catch {}
+    if (result.total > 0) {
+      try {
+        url = payUrl({ kind: "booking", id: result.bookingId });
+      } catch (err) {
+        // Pas de paiement en ligne possible : rien n'est gardé.
+        console.error("[seating] lien de paiement", err);
+        await settleBooking(result.bookingId, true).catch(() => {});
+        return jsonError("Le paiement en ligne est indisponible : ces places ne peuvent pas être réservées ici. Contactez la synagogue.", 503);
+      }
+    }
     let emailed = false;
-    if (result.donorEmail) {
+    // Places payantes : l'e-mail de confirmation part après le paiement.
+    if (result.total === 0 && result.donorEmail) {
       const r = await sendSeatConfirmationEmail({
         to: result.donorEmail,
         donorName: result.donorName,
@@ -61,12 +76,11 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
         due: result.total,
         payUrl: url,
         espaceUrl: `${appUrl}/espace/connexion?t=${encodeURIComponent(createDonorToken(donorId!))}`,
-        holdHours: result.total > 0 ? result.holdHours : 0,
       }).catch(() => ({ sent: false }));
       emailed = !!r.sent;
     }
 
-    const res = NextResponse.json({ booked: result.booked, total: result.total, payUrl: url, created, emailed, holdHours: result.holdHours });
+    const res = NextResponse.json({ booked: result.booked, total: result.total, payUrl: url, created, emailed, holdMinutes: HOLD_MINUTES });
     if (created) res.cookies.set(DONOR_COOKIE, createDonorToken(donorId!), DONOR_COOKIE_OPTIONS);
     return res;
   } catch (err) {

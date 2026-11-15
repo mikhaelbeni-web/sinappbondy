@@ -21,6 +21,7 @@ export default function SeatingPage() {
   const [deleted, setDeleted] = useState("");
   const [drawn, setDrawn] = useState(true);
   const [tariffs, setTariffs] = useState([{ id: "places", name: "Places", price: 0 }]);
+  const [from, setFrom] = useState<string | null>(null); // null = pas encore choisi : plan de base s'il existe
   const router = useRouter();
 
   async function load() {
@@ -39,13 +40,16 @@ export default function SeatingPage() {
     }
   }, []);
 
+  const models = plans.filter((p) => p.layout);
+  const fromId = from ?? models.find((p) => p.isBase)?.id ?? "";
+
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const res = await fetch("/api/seating", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(drawn ? { name, year, drawn: true, sections: tariffs } : { name, year, sections }),
+      body: JSON.stringify(drawn ? { name, year, drawn: true, sections: tariffs, fromPlanId: fromId || undefined } : { name, year, sections }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -98,7 +102,17 @@ export default function SeatingPage() {
               <span><strong>Grille simple</strong> : sections de N rangs × M places.</span>
             </label>
           </fieldset>
-          {drawn && (
+          {drawn && models.length > 0 && (
+            <div>
+              <label htmlFor="from" className="label">Point de départ</label>
+              <select id="from" className="input" value={fromId} onChange={(e) => setFrom(e.target.value)}>
+                {models.map((p) => <option key={p.id} value={p.id}>{p.isBase ? `Plan de base : ${p.name}` : `Copie de : ${p.name}`}</option>)}
+                <option value="">Salle vide</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Le dessin et les tarifs sont copiés, pas les places attribuées. Vous modifiez ensuite la copie librement, le plan d'origine ne change pas.</p>
+            </div>
+          )}
+          {drawn && !fromId && (
             <>
               <p className="label">Tarifs</p>
               {tariffs.map((s, i) => (
@@ -165,7 +179,7 @@ export default function SeatingPage() {
           <Link key={p.id} href={`/seating/${p.id}`} className="p-4 flex items-center justify-between gap-3 hover:bg-gray-50 text-sm">
             <div className="min-w-0">
               <p className="font-medium text-ink">{p.name}</p>
-              <p className="text-gray-500">{p.drawn || p.layout ? "Plan dessiné · " : ""}{p.sections.map((s: any) => s.name).join(" · ")}</p>
+              <p className="text-gray-500">{p.isBase ? "Plan de base · " : ""}{p.drawn || p.layout ? "Plan dessiné · " : ""}{p.sections.map((s: any) => s.name).join(" · ")}</p>
             </div>
             <span className="shrink-0 text-gray-600">
               {p.assigned} / {p.capacity} places

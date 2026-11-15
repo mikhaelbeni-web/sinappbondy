@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { adminDb } from "@/lib/firebaseAdmin";
 import { confirmCheckout } from "@/lib/helloasso";
 
 // Retour du payeur après le paiement HelloAsso (?code=succeeded|refused…).
@@ -8,7 +9,11 @@ export async function GET(req: NextRequest, { params }: { params: { ref: string 
   const code = new URL(req.url).searchParams.get("code");
   if (code && code !== "succeeded") return NextResponse.redirect(`${appUrl}/merci?erreur=refus`, 303);
   try {
-    if (/^[A-Za-z0-9]{1,40}$/.test(params.ref)) await confirmCheckout(params.ref);
+    if (/^[A-Za-z0-9]{1,40}$/.test(params.ref)) {
+      const paid = await confirmCheckout(params.ref);
+      const checkout = (await adminDb().collection("checkouts").doc(params.ref).get()).data() as any;
+      if (checkout?.metadata?.kind === "booking") return NextResponse.redirect(`${appUrl}/merci?places=${paid ? 1 : "attente"}`, 303);
+    }
   } catch (err) {
     // Le webhook prendra le relais.
     console.error("[helloasso/return]", err);

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/apiHelpers";
 import { currentDonorId } from "@/lib/donorSession";
 import { payUrl } from "@/lib/payments";
-import { planView, publishedPlans, releaseExpiredHolds } from "@/lib/seatingServer";
+import { adminDb } from "@/lib/firebaseAdmin";
+import { planView, publishedPlans, settlePendingSeats } from "@/lib/seatingServer";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +11,13 @@ export const dynamic = "force-dynamic";
 // sans nom. Un fidèle déjà connecté voit en plus ses propres places.
 export async function GET() {
   try {
-    const donorId = currentDonorId();
+    let donorId = currentDonorId();
+    // Fiche retirée depuis (réservation jamais payée) : visiteur anonyme.
+    if (donorId && !(await adminDb().collection("donors").doc(donorId).get()).exists) donorId = null;
     const out = [];
     let due = 0;
     for (const plan of await publishedPlans()) {
-      await releaseExpiredHolds(plan).catch((e) => console.error("[seating] libération", e));
+      await settlePendingSeats(plan).catch((e) => console.error("[seating] libération", e));
       const v = await planView(plan, donorId);
       out.push(v.view);
       due += v.due;

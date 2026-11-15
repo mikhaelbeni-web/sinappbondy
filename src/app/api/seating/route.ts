@@ -29,14 +29,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await withPermission("gerer_paiements");
-    const { name, year, sections, drawn } = await req.json();
+    const { name, year, sections, drawn, fromPlanId } = await req.json();
     if (!name?.trim()) return jsonError("Le nom du plan est requis.", 400);
     // Plan dessiné : les sections sont des tarifs ; le dessin se fait ensuite dans l'éditeur.
-    const clean = drawn ? cleanSections(sections?.length ? sections : [{ id: "places", name: "Places", price: 0 }], true) : cleanSections(sections);
+    // Départ d'un plan existant (le plan de base, par exemple) : son dessin et
+    // ses tarifs sont copiés ; les places attribuées ne le sont pas.
+    const source = drawn && fromPlanId ? ((await adminDb().collection("seatingPlans").doc(String(fromPlanId)).get()).data() as any) : null;
+    if (drawn && fromPlanId && !source?.layout) return jsonError("Le plan de départ est introuvable ou n'est pas dessiné.", 400);
+    const clean = source ? source.sections : drawn ? cleanSections(sections?.length ? sections : [{ id: "places", name: "Places", price: 0 }], true) : cleanSections(sections);
     if (!clean) return jsonError("Ajoutez au moins une section valide (identifiants uniques).", 400);
     const now = new Date().toISOString();
     const ref = adminDb().collection("seatingPlans").doc();
-    const doc = { id: ref.id, name: name.trim(), year: Number(year) || new Date().getFullYear(), sections: clean, ...(drawn ? { drawn: true, layout: null } : {}), active: true, createdAt: now, updatedAt: now };
+    const doc = { id: ref.id, name: name.trim(), year: Number(year) || new Date().getFullYear(), sections: clean, ...(drawn ? { drawn: true, layout: source?.layout || null } : {}), active: true, createdAt: now, updatedAt: now };
     await ref.set(doc);
     return NextResponse.json({ plan: doc });
   } catch (err) {

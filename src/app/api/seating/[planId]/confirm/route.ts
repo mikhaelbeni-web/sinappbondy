@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
     const planSnap = await db.collection("seatingPlans").doc(params.planId).get();
     if (!planSnap.exists) return jsonError("Plan introuvable.", 404);
     const plan = planSnap.data() as SeatingPlanDoc;
-    const seats = (await db.collection("seats").where("planId", "==", params.planId).get()).docs.map((d) => d.data() as any);
+    const seats = (await db.collection("seats").where("planId", "==", params.planId).get()).docs.map((d) => d.data() as any).filter((s) => !s.pending); // en attente de paiement : pas encore réservée
 
     const byDonor = new Map<string, any[]>();
     for (const s of seats) byDonor.set(s.donorId, [...(byDonor.get(s.donorId) || []), s]);

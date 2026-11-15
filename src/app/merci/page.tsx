@@ -3,7 +3,13 @@ export default function MerciPage({ searchParams }: { searchParams: Record<strin
   let title = "Toda raba !";
   let text = "Votre don a bien été enregistré. Merci infiniment pour votre générosité envers la synagogue.";
 
-  if (searchParams.desinscrit) {
+  if (searchParams.places === "attente") {
+    title = "Paiement en cours de vérification";
+    text = "Votre paiement n'est pas encore confirmé par HelloAsso. Vos places restent gardées ; vous recevrez un e-mail dès qu'elles seront réservées.";
+  } else if (searchParams.places) {
+    title = "Vos places sont réservées";
+    text = "Votre paiement a bien été reçu. Un e-mail de confirmation avec vos places vous a été envoyé.";
+  } else if (searchParams.desinscrit) {
     title = "Désinscription enregistrée";
     text = "Vous ne recevrez plus les messages groupés de la synagogue. Les rappels de dons et reçus fiscaux restent envoyés.";
   } else if (searchParams.deja) {
