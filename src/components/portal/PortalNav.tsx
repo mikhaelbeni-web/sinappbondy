@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, HeartHandshake, UserRound } from "lucide-react";
+import { Menu, X, HeartHandshake, UserRound, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { PORTAL_LINKS } from "@/lib/portal";
 
@@ -31,16 +31,6 @@ export default function PortalNav({ name, tagline }: { name: string; tagline: st
       <a href="#contenu" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 btn-primary">
         Aller au contenu
       </a>
-      {user && (
-        <div className="bg-ink text-white text-xs">
-          <div className="max-w-6xl mx-auto px-4 py-1.5 flex items-center justify-between gap-3">
-            <span className="truncate">Connecté en tant que membre de l'équipe</span>
-            <Link href="/dashboard" className="tap font-semibold underline underline-offset-2 shrink-0">
-              Tableau de bord
-            </Link>
-          </div>
-        </div>
-      )}
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="min-w-0 tap">
           <span className="block font-bold text-ink leading-tight truncate">{name}</span>
@@ -63,6 +53,16 @@ export default function PortalNav({ name, tagline }: { name: string; tagline: st
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
+          {user && (
+            <Link
+              href="/dashboard"
+              title="Tableau de bord de l'équipe"
+              aria-label="Tableau de bord de l'équipe"
+              className="tap inline-flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:text-ink hover:bg-cream"
+            >
+              <LayoutDashboard className="w-4 h-4" aria-hidden />
+            </Link>
+          )}
           <span className="hidden sm:block">
             <Link href="/espace" className="btn-secondary">
               <UserRound className="w-4 h-4" aria-hidden /> Mon espace
