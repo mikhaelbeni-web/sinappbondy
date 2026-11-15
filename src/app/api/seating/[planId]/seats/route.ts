@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { paidOf } from "@/lib/format";
-import { seatId, seatLabel, type SeatingPlanDoc } from "@/lib/seating";
+import { findPlanSeat, seatId, type SeatingPlanDoc } from "@/lib/seating";
 
 // Attribuer des places : { donorId, seats: [{ sectionId, row, seat }], bill }.
 // bill = créer la promesse au tarif de la section (sinon place offerte).
@@ -22,13 +22,12 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
       const donor = donorSnap.data() as any;
 
       const wanted = seats.map((s: any) => {
-        const sec = plan.sections.find((x) => x.id === s.sectionId);
         const row = Number(s.row);
         const seat = Number(s.seat);
-        if (!sec || row < 1 || row > sec.rows || seat < 1 || seat > sec.seatsPerRow) {
-          throw Object.assign(new Error("Place hors du plan."), { status: 400 });
-        }
-        return { sec, row, seat, ref: db.collection("seats").doc(seatId(plan.id, sec.id, row, seat)) };
+        const found = findPlanSeat(plan, String(s.sectionId), row, seat);
+        if (!found) throw Object.assign(new Error("Place hors du plan."), { status: 400 });
+        const sec = found.section;
+        return { sec, row, seat, label: found.label, ref: db.collection("seats").doc(seatId(plan.id, sec.id, row, seat)) };
       });
       const existing = await tx.getAll(...wanted.map((w) => w.ref));
       const taken = existing.find((e) => e.exists);
@@ -50,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
             serviceId: "",
             serviceLabel: plan.name,
             catalogItemId: null,
-            catalogItemName: `Place ${seatLabel(w.sec.name, w.row, w.seat)}`,
+            catalogItemName: `Place ${w.label}`,
             amount: w.sec.price,
             amountPaid: 0,
             currency: "eur",

@@ -4,7 +4,7 @@ import { withPermission, handleApiError, jsonError } from "@/lib/apiHelpers";
 import { sendSeatConfirmationEmail } from "@/lib/email";
 import { remainingOf, round2 } from "@/lib/format";
 import { payUrl } from "@/lib/payments";
-import { seatLabel, type SeatingPlanDoc } from "@/lib/seating";
+import { planSeatLabel, type SeatingPlanDoc } from "@/lib/seating";
 
 // Envoie à chaque famille la liste de ses places (et le reste à régler).
 // { onlyNew: true } : seulement les familles pas encore confirmées.
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { planId: str
       } catch {}
       const labels = list
         .sort((a, b) => a.sectionId.localeCompare(b.sectionId) || a.row - b.row || a.seat - b.seat)
-        .map((s) => seatLabel(plan.sections.find((x) => x.id === s.sectionId)?.name || "", s.row, s.seat));
+        .map((s) => planSeatLabel(plan, s.sectionId, s.row, s.seat));
       const r = await sendSeatConfirmationEmail({ to: donor.email, donorName: list[0].donorName, planName: plan.name, seats: labels, due, payUrl: url });
       if (!r.sent) return jsonError(`Envoi impossible : ${r.reason}.`, 400);
       const now = new Date().toISOString();
