@@ -49,31 +49,33 @@ export default async function PortalHome() {
   return (
     <PortalShell portal={portal}>
       {/* Bandeau d'accueil */}
-      <section className="relative overflow-hidden bg-ink-dark text-white rounded-b-[2rem]">
+      {/* Photo sans voile ; le texte tient dans une carte en verre dépoli,
+          petite et à droite, pour laisser voir l'Aron Hakodesh. Sur téléphone
+          la photo est au-dessus et la carte ne mord que sur son bord bas. */}
+      <section className="relative overflow-hidden bg-cream sm:bg-ink-dark sm:rounded-b-[2rem]">
         {portal.heroPhoto && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={portal.heroPhoto} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+          <img src={portal.heroPhoto} alt="" aria-hidden className="block w-full h-72 object-cover sm:absolute sm:inset-0 sm:h-full" />
         )}
-        {/* Photo plein cadre : le voile monte du bas, là où se trouve le texte ;
-            le haut de la photo reste sans couleur. */}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-dark from-10% via-ink-dark/85 via-50% to-ink-dark/0 to-85% sm:via-ink-dark/75 sm:via-45% sm:to-80%" aria-hidden />
-        <div className="relative max-w-6xl mx-auto px-4 pt-44 pb-20 sm:pt-64 sm:pb-36 [text-shadow:0_1px_8px_rgb(var(--ink-dark)_/_0.8)]">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gold-light">{portal.tagline}</p>
-          <h1 className="text-4xl sm:text-5xl font-extrabold mt-2 max-w-3xl leading-tight">{portal.displayName}</h1>
-          <p className="text-white/85 mt-4 max-w-2xl text-base sm:text-lg">{portal.intro}</p>
-          <span className="block w-16 h-1 rounded-full bg-gold-sand mt-6" />
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 [text-shadow:none]">
-            <Link href="/don" className="btn bg-gold-sand text-ink-dark hover:bg-gold-light px-6 py-3 text-base">
-              <HeartHandshake className="w-5 h-5" aria-hidden /> Faire un don
-            </Link>
-            {openPlan && (
-              <Link href="/places" className="btn bg-white text-ink hover:bg-cream px-6 py-3 text-base">
-                <Armchair className="w-5 h-5" aria-hidden /> Réserver ma place
+        <div className="relative max-w-6xl mx-auto px-4 -mt-8 pb-14 sm:mt-0 sm:pt-40 sm:pb-32 flex justify-end">
+          <div className="w-full sm:max-w-sm rounded-3xl bg-white/80 backdrop-blur-lg ring-1 ring-white/60 shadow-soft p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gold">{portal.tagline}</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold mt-1 leading-tight text-ink">{portal.displayName}</h1>
+            <p className="text-gray-700 mt-2 text-sm">{portal.intro}</p>
+            <span className="block w-12 h-1 rounded-full bg-gold-sand mt-4" />
+            <div className="mt-4 flex flex-col gap-2">
+              <Link href="/don" className="btn-primary">
+                <HeartHandshake className="w-4 h-4" aria-hidden /> Faire un don
               </Link>
-            )}
-            <Link href="/horaires" className="btn border-2 border-white/70 text-white hover:bg-white/10 px-6 py-3 text-base">
-              <Clock className="w-5 h-5" aria-hidden /> Horaires des offices
-            </Link>
+              {openPlan && (
+                <Link href="/places" className="btn-secondary">
+                  <Armchair className="w-4 h-4" aria-hidden /> Réserver ma place
+                </Link>
+              )}
+              <Link href="/horaires" className="btn-secondary">
+                <Clock className="w-4 h-4" aria-hidden /> Horaires des offices
+              </Link>
+            </div>
           </div>
         </div>
       </section>

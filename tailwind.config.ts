@@ -15,6 +15,11 @@ const config: Config = {
         gold: { DEFAULT: "#8a6633", light: "#e8d7bb", sand: "#c9a46c", dark: "#7a5a2e" },
         cream: "rgb(var(--cream) / <alpha-value>)",
       },
+      // Couleur des textes « ink » séparée de celle des fonds : sur le portail
+      // les fonds sont bordeaux mais les textes restent anthracite.
+      textColor: {
+        ink: { DEFAULT: "rgb(var(--ink-text) / <alpha-value>)", dark: "rgb(var(--ink-text-dark) / <alpha-value>)", light: "rgb(var(--ink-text-light) / <alpha-value>)" },
+      },
       fontFamily: {
         sans: ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],
         // Les titres utilisaient font-serif : même famille désormais.
