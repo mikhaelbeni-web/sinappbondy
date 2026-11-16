@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -14,9 +14,15 @@
   --ink-text-light: var(--ink-light);
 }
 
-/* Portail public des fidèles : bleu nuit de la maison sur fond pierre. */
+/* Portail public des fidèles : noir, or et ivoire, titres en serif. */
 .theme-portail {
-  --cream: 239 233 223;
+  --ink: 28 32 40;
+  --ink-dark: 20 24 31;
+  --ink-light: 52 57 68;
+  --ink-text: 33 36 44;
+  --ink-text-dark: 20 24 31;
+  --ink-text-light: 60 64 74;
+  --cream: 250 248 245;
   color: rgb(var(--ink-text));
 }
 
@@ -123,4 +129,79 @@ h1 {
 .min-h-screen {
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+/* ---- Portail public : typographie et composants propres ---- */
+.theme-portail h1,
+.theme-portail h2,
+.theme-portail .titre-serif,
+.theme-portail main .card p.font-bold {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+.theme-portail main .card p.font-bold {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.theme-portail main .card h2 {
+  font-size: 1.5rem;
+}
+/* Or assez foncé pour un texte blanc lisible (4,8:1). */
+.theme-portail .btn-primary,
+.theme-portail .btn-gold {
+  background-color: #8a6e2f;
+  color: #fff;
+  box-shadow: 0 6px 18px rgb(138 110 47 / 0.3);
+}
+.theme-portail .btn-primary:hover,
+.theme-portail .btn-gold:hover {
+  background-color: #77602a;
+}
+/* Dernier mot d'un titre en or. */
+.mot-or {
+  color: #8a6e2f;
+}
+.sur-sombre .mot-or {
+  color: #d9b877;
+}
+/* Surtitre en capitales espacées. */
+.surtitre {
+  display: block;
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #8a6e2f;
+}
+.sur-sombre .surtitre {
+  color: #d9b877;
+}
+/* Bande sombre pleine largeur à l'intérieur d'une colonne centrée. */
+.bande-sombre {
+  background: rgb(var(--ink-dark));
+  box-shadow: 0 0 0 100vmax rgb(var(--ink-dark));
+  clip-path: inset(0 -100vmax);
+  padding: 3.5rem 0;
+}
+.bande-sombre h2 {
+  color: #fff;
+}
+.bande-sombre .card {
+  background: rgb(239 236 231 / 0.05);
+  box-shadow: inset 0 0 0 1px rgb(239 236 231 / 0.14);
+}
+.bande-sombre .card:hover {
+  box-shadow: inset 0 0 0 1px rgb(217 184 119 / 0.7);
+}
+.theme-portail .bande-sombre .card p.font-bold {
+  color: #efece7;
+}
+.bande-sombre .card p.text-sm {
+  color: rgb(239 236 231 / 0.75);
+}
+.bande-sombre .card > span {
+  background: rgb(201 164 108 / 0.16);
+  color: #d9b877;
 }
