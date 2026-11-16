@@ -9,6 +9,9 @@
   --ink-dark: 7 26 70;
   --ink-light: 26 70 160;
   --cream: 243 245 250;
+  --ink-text: var(--ink);
+  --ink-text-dark: var(--ink-dark);
+  --ink-text-light: var(--ink-light);
 }
 
 /* Portail public des fidèles : bordeaux et or, fond ivoire. */
@@ -17,7 +20,10 @@
   --ink-dark: 58 11 22;
   --ink-light: 122 31 51;
   --cream: 250 245 238;
-  color: rgb(var(--ink));
+  --ink-text: 38 30 33;
+  --ink-text-dark: 24 18 20;
+  --ink-text-light: 74 60 64;
+  color: rgb(var(--ink-text));
 }
 
 body {
