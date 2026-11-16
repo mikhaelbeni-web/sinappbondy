@@ -15,7 +15,7 @@ export default async function HorairesPage() {
 
   return (
     <PortalShell portal={portal}>
-      <PortalHero eyebrow="Prières" title="Horaires des offices" subtitle={week ? `${week.hebrewDate} · Chabbat ${week.parasha.name}` : undefined} />
+      <PortalHero photo={portal.heroPhoto} eyebrow="Prières" title="Horaires des offices" subtitle={week ? `${week.hebrewDate} · Chabbat ${week.parasha.name}` : undefined} />
       <div className="max-w-6xl mx-auto px-4 -mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="space-y-4 lg:col-span-2">
           {week && week.announcements.length > 0 && (

@@ -12,7 +12,7 @@ export default async function PlacesPage() {
   const portal = await getPortal();
   return (
     <PortalShell portal={portal}>
-      <PortalHero eyebrow="Fêtes" title="Réserver ma place" subtitle="Choisissez vos places sur le plan, puis validez avec votre e-mail." />
+      <PortalHero photo={portal.heroPhoto} eyebrow="Fêtes" title="Réserver ma place" subtitle="Choisissez vos places sur le plan, puis validez avec votre e-mail." />
       <div className="max-w-4xl mx-auto px-4 -mt-8 space-y-5">
         <SeatPicker />
       </div>

@@ -52,10 +52,11 @@ export default async function PortalHome() {
       <section className="relative overflow-hidden bg-ink-dark text-white rounded-b-[2rem]">
         {portal.heroPhoto && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={portal.heroPhoto} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover opacity-40" />
+          <img src={portal.heroPhoto} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-br from-ink-dark/95 via-ink/80 to-ink-light/60" aria-hidden />
-        <div className="relative max-w-6xl mx-auto px-4 pt-14 pb-20 sm:pt-20 sm:pb-28">
+        {/* Voile dense seulement du côté du texte : la photo ressort à droite. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-ink-dark/90 via-ink-dark/70 to-ink-dark/45 sm:via-ink-dark/50 sm:to-transparent" aria-hidden />
+        <div className="relative max-w-6xl mx-auto px-4 pt-14 pb-20 sm:pt-24 sm:pb-36 [text-shadow:0_1px_8px_rgb(7_26_70_/_0.7)]">
           <p className="text-xs font-semibold uppercase tracking-widest text-gold-sand">{portal.tagline}</p>
           <h1 className="text-4xl sm:text-5xl font-extrabold mt-2 max-w-3xl leading-tight">{portal.displayName}</h1>
           <p className="text-white/85 mt-4 max-w-2xl text-base sm:text-lg">{portal.intro}</p>

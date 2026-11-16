@@ -11,7 +11,7 @@ export default async function KiddouchPage() {
   const portal = await getPortal();
   return (
     <PortalShell portal={portal}>
-      <PortalHero eyebrow="Chabbat" title="Parrainer un kiddouch" subtitle="Choisissez le Chabbat et la formule, puis validez avec votre e-mail." />
+      <PortalHero photo={portal.heroPhoto} eyebrow="Chabbat" title="Parrainer un kiddouch" subtitle="Choisissez le Chabbat et la formule, puis validez avec votre e-mail." />
       <div className="max-w-4xl mx-auto px-4 -mt-8">
         <KiddushPicker />
       </div>

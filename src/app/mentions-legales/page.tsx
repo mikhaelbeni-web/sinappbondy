@@ -17,7 +17,7 @@ export default async function MentionsLegalesPage() {
 
   return (
     <PortalShell portal={portal}>
-      <PortalHero title="Mentions légales" />
+      <PortalHero photo={portal.heroPhoto} title="Mentions légales" />
       <div className="max-w-3xl mx-auto px-4 -mt-8">
         <div className="card p-6 space-y-6 text-sm text-gray-700 leading-relaxed">
           <section>
