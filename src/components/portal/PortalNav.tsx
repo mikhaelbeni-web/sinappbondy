@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, HeartHandshake, UserRound, LayoutDashboard } from "lucide-react";
+import { Menu, X, HeartHandshake, UserRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { PORTAL_LINKS } from "@/lib/portal";
 
@@ -14,7 +14,7 @@ import { PORTAL_LINKS } from "@/lib/portal";
 export default function PortalNav({ name, tagline }: { name: string; tagline: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { needsSetup, loading, user } = useAuth();
+  const { needsSetup, loading } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Première installation : l'assistant de configuration reste prioritaire.
@@ -53,16 +53,6 @@ export default function PortalNav({ name, tagline }: { name: string; tagline: st
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
-          {user && (
-            <Link
-              href="/dashboard"
-              title="Espace membre"
-              aria-label="Espace membre"
-              className="tap inline-flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:text-ink hover:bg-cream"
-            >
-              <LayoutDashboard className="w-4 h-4" aria-hidden />
-            </Link>
-          )}
           <span className="hidden sm:block">
             <Link href="/espace" className="btn-secondary">
               <UserRound className="w-4 h-4" aria-hidden /> Mon espace
