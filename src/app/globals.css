@@ -178,12 +178,35 @@ h1 {
 .sur-sombre .surtitre {
   color: #d9b877;
 }
-/* Bande sombre pleine largeur à l'intérieur d'une colonne centrée. */
+/* Bande sombre pleine largeur à l'intérieur d'une colonne centrée. Le fond
+   est porté par un pseudo-élément qui dépasse de 2,5rem en haut et en bas et
+   s'y fond dans la page : pas de cassure nette entre le sombre et l'ivoire. */
+.theme-portail main {
+  overflow-x: clip;
+}
 .bande-sombre {
-  background: rgb(var(--ink-dark));
-  box-shadow: 0 0 0 100vmax rgb(var(--ink-dark));
-  clip-path: inset(0 -100vmax);
+  position: relative;
+  isolation: isolate;
   padding: 3.5rem 0;
+}
+.bande-sombre::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -2.5rem;
+  bottom: -2.5rem;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--ink-dark) / 0) 0,
+    rgb(var(--ink-dark) / 0.5) 1.1rem,
+    rgb(var(--ink-dark)) 2.5rem,
+    rgb(var(--ink-dark)) calc(100% - 2.5rem),
+    rgb(var(--ink-dark) / 0.5) calc(100% - 1.1rem),
+    rgb(var(--ink-dark) / 0) 100%
+  );
 }
 .bande-sombre h2 {
   color: #fff;
