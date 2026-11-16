@@ -9,9 +9,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: "#0b2e6f", dark: "#071a46", light: "#1a46a0" },
+        // ink et cream passent par des variables CSS (globals.css) : le portail
+        // public les redéfinit en bordeaux (.theme-portail), le back-office reste bleu.
+        ink: { DEFAULT: "rgb(var(--ink) / <alpha-value>)", dark: "rgb(var(--ink-dark) / <alpha-value>)", light: "rgb(var(--ink-light) / <alpha-value>)" },
         gold: { DEFAULT: "#8a6633", light: "#e8d7bb", sand: "#c9a46c", dark: "#7a5a2e" },
-        cream: "#f3f5fa",
+        cream: "rgb(var(--cream) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],

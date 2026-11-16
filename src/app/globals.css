@@ -4,9 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ink: 11 46 111;
+  --ink-dark: 7 26 70;
+  --ink-light: 26 70 160;
+  --cream: 243 245 250;
+}
+
+/* Portail public des fidèles : bordeaux et or, fond ivoire. */
+.theme-portail {
+  --ink: 91 20 36;
+  --ink-dark: 58 11 22;
+  --ink-light: 122 31 51;
+  --cream: 250 245 238;
+  color: rgb(var(--ink));
+}
+
 body {
-  background-color: #f3f5fa;
-  color: #0b2e6f;
+  background-color: rgb(var(--cream));
+  color: rgb(var(--ink));
 }
 
 h1 {
