@@ -59,6 +59,19 @@ export default function CampaignsPage() {
     await load();
   }
 
+  // Met la campagne en avant sur le portail (fenêtre d'accueil + bandeau).
+  async function feature(c: any) {
+    setMessage("");
+    const res = await fetch(`/api/campaigns/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ featured: !c.featured }),
+    });
+    const d = await res.json().catch(() => ({}));
+    setMessage(res.ok ? (c.featured ? "Campagne retirée de l'accueil du portail." : `« ${c.title} » s'affiche maintenant à l'ouverture du portail.`) : d.error || "Action impossible.");
+    await load();
+  }
+
   async function copy(url: string) {
     try {
       await navigator.clipboard.writeText(url);
@@ -115,7 +128,7 @@ export default function CampaignsPage() {
         </form>
       )}
 
-      {message && <p className="text-sm text-gray-600 break-all">{message}</p>}
+      {message && <p role="status" className="text-sm text-gray-700 break-words">{message}</p>}
 
       <div className="card divide-y">
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
@@ -128,6 +141,7 @@ export default function CampaignsPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-ink">
                     {c.title} {!c.active && <span className="text-xs text-gray-500">(clôturée)</span>}
+                    {c.featured && c.active && <span className="ml-2 rounded-full bg-gold-sand/40 px-2 py-0.5 text-xs text-ink">À la une du portail</span>}
                   </p>
                   <p className="text-gray-500 break-all">{c.url}</p>
                 </div>
@@ -138,6 +152,11 @@ export default function CampaignsPage() {
                   <button className="text-gray-600 hover:underline tap" onClick={() => toggle(c)}>{c.active ? "Clôturer" : "Rouvrir"}</button>
                 </div>
               </div>
+              {c.active && (
+                <button type="button" className={c.featured ? "btn-secondary" : "btn-primary"} onClick={() => feature(c)}>
+                  {c.featured ? "Retirer de l'accueil du portail" : "Publier à la une du portail"}
+                </button>
+              )}
               <p className="text-gray-600">
                 <span className="font-semibold text-green-700">{formatEUR(c.raised)}</span> collectés · {c.donations} don(s)
                 {c.goal > 0 && ` · objectif ${formatEUR(c.goal)} (${pct} %)`}
