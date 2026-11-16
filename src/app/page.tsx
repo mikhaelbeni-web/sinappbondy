@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Armchair, CalendarDays, Wine, PartyPopper, Clock, Flame, HeartHandshake, UserRound, Images, Droplets, Sparkles, ArrowRight, MapPin, Phone } from "lucide-react";
-import PortalShell from "@/components/portal/PortalShell";
+import PortalShell, { MotOr } from "@/components/portal/PortalShell";
 import { getPortal, upcomingEvents, upcomingHolidays, weekInfo } from "@/lib/portalServer";
 import { publishedPlans } from "@/lib/seatingServer";
 import { featuredCampaign } from "@/lib/campaigns";
@@ -52,27 +52,27 @@ export default async function PortalHome() {
       {/* Photo sans voile ; le texte tient dans une carte en verre dépoli,
           petite et à droite, pour laisser voir l'Aron Hakodesh. Sur téléphone
           la photo est au-dessus et la carte ne mord que sur son bord bas. */}
-      <section className="relative overflow-hidden bg-cream sm:bg-ink-dark sm:rounded-b-[2rem]">
+      <section className="relative overflow-hidden bg-ink-dark sm:rounded-b-[2rem]">
         {portal.heroPhoto && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={portal.heroPhoto} alt="" aria-hidden className="block w-full h-72 object-cover sm:absolute sm:inset-0 sm:h-full" />
         )}
         <div className="relative max-w-6xl mx-auto px-4 -mt-8 pb-14 sm:mt-0 sm:pt-40 sm:pb-32 flex justify-end">
-          <div className="w-full sm:max-w-sm rounded-3xl bg-white/80 backdrop-blur-lg ring-1 ring-white/60 shadow-soft p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gold">{portal.tagline}</p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold mt-1 leading-tight text-ink">{portal.displayName}</h1>
-            <p className="text-gray-700 mt-2 text-sm">{portal.intro}</p>
+          <div className="sur-sombre w-full sm:max-w-sm rounded-3xl bg-ink-dark/80 backdrop-blur-lg ring-1 ring-white/15 shadow-2xl p-5 sm:p-6">
+            <p className="surtitre">{portal.tagline}</p>
+            <h1 className="text-4xl mt-1 leading-none text-white"><MotOr text={portal.displayName} /></h1>
+            <p className="text-white/80 mt-3 text-sm">{portal.intro}</p>
             <span className="block w-12 h-1 rounded-full bg-gold-sand mt-4" />
             <div className="mt-4 flex flex-col gap-2">
               <Link href="/don" className="btn-primary">
                 <HeartHandshake className="w-4 h-4" aria-hidden /> Faire un don
               </Link>
               {openPlan && (
-                <Link href="/places" className="btn-secondary">
+                <Link href="/places" className="btn border border-white/45 text-white hover:bg-white/10">
                   <Armchair className="w-4 h-4" aria-hidden /> Réserver ma place
                 </Link>
               )}
-              <Link href="/horaires" className="btn-secondary">
+              <Link href="/horaires" className="btn border border-white/45 text-white hover:bg-white/10">
                 <Clock className="w-4 h-4" aria-hidden /> Horaires des offices
               </Link>
             </div>
@@ -168,9 +168,12 @@ export default async function PortalHome() {
         </div>
 
         {/* Actions rapides */}
-        <section aria-labelledby="titre-services-en-ligne">
-          <h2 id="titre-services-en-ligne" className="text-2xl font-bold text-ink">En ligne</h2>
-          <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`}>
+        <section aria-labelledby="titre-services-en-ligne" className="bande-sombre sur-sombre">
+          <span className="losange losange-haut" aria-hidden />
+          <span className="losange losange-bas" aria-hidden />
+          <span className="surtitre text-center">Services</span>
+          <h2 id="titre-services-en-ligne" className="text-4xl sm:text-5xl text-center mt-1"><MotOr text="En ligne" /></h2>
+          <div className={`mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`}>
             {actions.map((a) => (
               <Link key={a.href} href={a.href} className="card p-5 group hover:ring-2 hover:ring-gold-sand/60 transition-shadow focus-visible:ring-2 focus-visible:ring-ink">
                 <span className="inline-flex w-11 h-11 rounded-full bg-cream items-center justify-center text-ink group-hover:bg-ink group-hover:text-white transition-colors">
@@ -186,7 +189,7 @@ export default async function PortalHome() {
         {/* Événements */}
         {events.length > 0 && (
           <section aria-labelledby="titre-evenements">
-            <h2 id="titre-evenements" className="text-2xl font-bold text-ink">Prochains événements</h2>
+            <h2 id="titre-evenements" className="text-4xl sm:text-5xl text-ink text-center"><MotOr text="Prochains événements" /></h2>
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
               {events.map((e) => (
                 <Link key={e.slug} href={`/evenement/${e.slug}`} className="card p-5 hover:ring-2 hover:ring-gold-sand/60">
@@ -204,11 +207,12 @@ export default async function PortalHome() {
 
         {/* Vie de la communauté */}
         <section aria-labelledby="titre-communaute">
-          <div className="flex items-end justify-between gap-4">
-            <h2 id="titre-communaute" className="text-2xl font-bold text-ink">La vie de la communauté</h2>
-            <Link href="/communaute" className="text-sm font-semibold text-gold hover:underline tap shrink-0">Tout voir</Link>
+          <div className="flex flex-col items-center text-center gap-1">
+            <span className="surtitre">Communauté</span>
+            <h2 id="titre-communaute" className="text-4xl sm:text-5xl text-ink"><MotOr text="La vie de la communauté" /></h2>
+            <Link href="/communaute" className="text-sm font-semibold text-gold hover:underline tap mt-1">Tout voir</Link>
           </div>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {portal.services.slice(0, 4).map((s) => (
               <div key={s.title} className="card p-5">
                 <p className="font-bold text-ink">{s.title}</p>

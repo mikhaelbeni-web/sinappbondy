@@ -33,7 +33,7 @@ export default function PortalNav({ name, tagline }: { name: string; tagline: st
       </a>
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="min-w-0 tap">
-          <span className="block font-bold text-ink leading-tight truncate">{name}</span>
+          <span className="titre-serif block text-xl text-ink leading-tight truncate">{name}</span>
           <span className="block text-xs text-gray-500 truncate">{tagline}</span>
         </Link>
 

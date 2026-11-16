@@ -12,6 +12,19 @@ export default function PortalShell({ portal, children }: { portal: PortalSettin
   const footerPhoto = portal.photos.find((p) => p.src !== portal.heroPhoto && p.category === "synagogue")?.src || portal.photos.find((p) => p.src !== portal.heroPhoto)?.src || portal.heroPhoto;
   return (
     <div className="theme-portail min-h-screen bg-cream flex flex-col">
+      {/* Barre de contact, au-dessus de la navigation. */}
+      <div className="bg-ink-dark text-white/85 text-xs">
+        <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap gap-x-5 gap-y-1">
+          {portal.phone && (
+            <a href={telHref(portal.phone)} className="inline-flex items-center gap-1.5 hover:text-white">
+              <Phone className="w-3.5 h-3.5" aria-hidden /> {portal.phone}
+            </a>
+          )}
+          <a href={mapUrl(portal)} target="_blank" rel="noreferrer" className="hidden sm:inline-flex items-center gap-1.5 hover:text-white">
+            <MapPin className="w-3.5 h-3.5" aria-hidden /> {fullAddress(portal)}
+          </a>
+        </div>
+      </div>
       <PortalNav name={portal.displayName} tagline={portal.tagline} />
       <main id="contenu" className="flex-1">
         {children}
@@ -26,7 +39,7 @@ export default function PortalShell({ portal, children }: { portal: PortalSettin
         )}
         <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-sm">
           <div className="space-y-3">
-            <p className="font-bold text-white text-base">{portal.displayName}</p>
+            <p className="titre-serif text-white text-xl">{portal.displayName}</p>
             <p>{portal.tagline}</p>
             <span className="block w-12 h-1 rounded-full bg-gold-sand" />
           </div>
@@ -83,6 +96,18 @@ export default function PortalShell({ portal, children }: { portal: PortalSettin
   );
 }
 
+// Titre dont le dernier mot est en or (un seul mot : laissé tel quel).
+export function MotOr({ text }: { text: string }) {
+  const words = text.trim().split(/\s+/);
+  if (words.length < 2) return <>{text}</>;
+  const last = words.pop();
+  return (
+    <>
+      {words.join(" ")} <span className="mot-or">{last}</span>
+    </>
+  );
+}
+
 // En-tête de page intérieure du portail (titre + sous-titre + trait doré).
 // En-tête des pages du portail. Avec une photo, celle-ci reste bien visible :
 // le voile n'est dense que du côté du texte (à gauche) et s'efface vers
@@ -98,7 +123,7 @@ export function PortalHero({ eyebrow, title, subtitle, photo }: { eyebrow?: stri
     >
       <div className="max-w-6xl mx-auto px-4 pt-12 pb-16 sm:pt-16 sm:pb-20 [text-shadow:0_1px_8px_rgb(var(--ink-dark)_/_0.7)]">
         {eyebrow && <p className="text-xs font-semibold uppercase tracking-widest text-gold-sand">{eyebrow}</p>}
-        <h1 className="text-3xl sm:text-4xl font-bold mt-1">{title}</h1>
+        <h1 className="sur-sombre text-4xl sm:text-5xl font-bold mt-1"><MotOr text={title} /></h1>
         {subtitle && <p className="text-white/90 mt-2 max-w-2xl">{subtitle}</p>}
         <span className="block w-14 h-1 rounded-full bg-gold-sand mt-4" />
       </div>
