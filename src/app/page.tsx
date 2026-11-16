@@ -4,6 +4,8 @@ import { Armchair, CalendarDays, Wine, PartyPopper, Clock, Flame, HeartHandshake
 import PortalShell from "@/components/portal/PortalShell";
 import { getPortal, upcomingEvents, upcomingHolidays, weekInfo } from "@/lib/portalServer";
 import { publishedPlans } from "@/lib/seatingServer";
+import { featuredCampaign } from "@/lib/campaigns";
+import CampaignPopup from "@/components/portal/CampaignPopup";
 import { formatEUR } from "@/lib/format";
 import { frDay, frRange, fullAddress, mapUrl, telHref } from "@/lib/portal";
 
@@ -16,12 +18,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // Accueil du portail des fidèles (page publique).
 export default async function PortalHome() {
-  const [portal, week, events, plans] = await Promise.all([
+  const [portal, week, events, plans, campaign] = await Promise.all([
     getPortal(),
     weekInfo().catch(() => null),
     upcomingEvents(3).catch(() => []),
     publishedPlans().catch(() => []),
+    featuredCampaign(),
   ]);
+  const campaignPct = campaign && campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : null;
   // Le bouton du bandeau n'apparaît que lorsqu'un plan a ses ventes ouvertes ;
   // la carte « Réserver ma place » de la rubrique En ligne est toujours là.
   const openPlan = plans.find((p) => p.salesOpen);
@@ -72,7 +76,31 @@ export default async function PortalHome() {
         </div>
       </section>
 
+      {campaign && <CampaignPopup campaign={campaign} photo={portal.heroPhoto} />}
+
       <div className="max-w-6xl mx-auto px-4 -mt-10 relative space-y-12">
+        {/* Campagne mise en avant : reste visible une fois la fenêtre fermée. */}
+        {campaign && (
+          <Link href={`/don/${campaign.slug}`} className="card p-5 flex flex-col sm:flex-row sm:items-center gap-4 ring-2 ring-gold-sand/70 hover:ring-gold transition-shadow">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gold">Campagne de dons en cours</p>
+              <p className="text-xl font-bold text-ink mt-1">{campaign.title}</p>
+              {campaignPct !== null && (
+                <>
+                  <div className="mt-3 h-2 rounded-full bg-cream overflow-hidden" role="img" aria-label={`${campaignPct} % de l'objectif atteint`}>
+                    <div className="h-full rounded-full bg-gradient-to-r from-gold to-gold-sand" style={{ width: `${Math.max(campaignPct, 3)}%` }} />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {formatEUR(campaign.raised)} sur {formatEUR(campaign.goal)} ({campaignPct} %)
+                  </p>
+                </>
+              )}
+            </div>
+            <span className="btn-primary shrink-0">
+              <HeartHandshake className="w-4 h-4" aria-hidden /> Je participe
+            </span>
+          </Link>
+        )}
         {/* Cette semaine + prochaine fête */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="card p-5 md:col-span-2">
