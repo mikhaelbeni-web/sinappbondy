@@ -24,15 +24,27 @@ export default function KiddushPicker() {
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError("Chargement impossible. Réessayez dans un instant."));
+  const [notice, setNotice] = useState("");
   useEffect(() => {
     load();
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("expire")) setNotice("Le délai de paiement est dépassé : ce Chabbat a été remis à disposition. Vous pouvez le choisir à nouveau s'il est encore libre.");
+    else if (q.get("annule")) setNotice("Paiement annulé : le Chabbat n'a pas été réservé. Vous pouvez recommencer.");
   }, []);
 
   if (!data) return <p className="card p-5 text-sm text-gray-600" role={error ? "alert" : "status"}>{error || "Chargement…"}</p>;
   if (!data.enabled) return <p className="card p-5 text-sm text-gray-600">Le parrainage en ligne est fermé pour le moment. Contactez le secrétariat.</p>;
 
   if (done) {
-    return (
+    return done.payUrl ? (
+      <div className="card p-6 space-y-3" role="status">
+        <p className="text-lg font-bold text-ink">Dernière étape : le paiement</p>
+        <p className="text-sm text-gray-700">
+          {done.label}, {done.serviceLabel}. Ce Chabbat vous est gardé {done.holdMinutes} minutes. Il n'est réservé qu'une fois le paiement effectué ; sans paiement, il est remis à disposition.
+        </p>
+        <a href={done.payUrl} className="btn-primary">Payer {formatEUR(done.price)} et réserver</a>
+      </div>
+    ) : (
       <div className="card p-6 space-y-3" role="status">
         <p className="flex items-center gap-2 text-lg font-bold text-ink">
           <Check className="w-5 h-5 text-green-700" aria-hidden /> Merci pour votre parrainage
@@ -41,11 +53,7 @@ export default function KiddushPicker() {
           {done.label}, {done.serviceLabel}.
           {done.emailed ? " Un e-mail de confirmation vous a été envoyé." : ""}
         </p>
-        {done.payUrl ? (
-          <a href={done.payUrl} className="btn-primary">Régler {formatEUR(done.price)} en ligne</a>
-        ) : (
-          <p className="text-sm text-gray-700">Le secrétariat vous recontacte pour l'organisation et le règlement.</p>
-        )}
+        <p className="text-sm text-gray-700">Le secrétariat vous recontacte pour l'organisation et le règlement.</p>
       </div>
     );
   }
@@ -75,7 +83,9 @@ export default function KiddushPicker() {
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      {notice && <p role="status" className="card p-4 text-sm text-amber-800 bg-amber-50">{notice}</p>}
       <p className="card p-5 text-sm text-gray-700 leading-relaxed">{data.intro}</p>
+      <p className="text-sm text-gray-600 px-1">Un Chabbat est réservé une fois le paiement effectué en ligne.</p>
 
       <fieldset className="card p-5">
         <legend className="font-bold text-ink text-lg float-left w-full mb-3">1. Choisissez un Chabbat</legend>
@@ -198,7 +208,7 @@ export default function KiddushPicker() {
               <span className="text-lg font-bold">{opt.price > 0 ? formatEUR(opt.price) : "Sur devis"}</span>
             </p>
             <button type="submit" className="btn-primary px-6 py-3" disabled={busy}>
-              {busy ? "Envoi…" : "Valider mon parrainage"}
+              {busy ? "Envoi…" : opt.price > 0 ? "Continuer vers le paiement" : "Valider mon parrainage"}
             </button>
           </div>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}

@@ -259,6 +259,11 @@ export async function confirmCheckout(checkoutId: string): Promise<boolean> {
       const { settleBooking } = await import("./seatingServer");
       await settleBooking(m.bookingId).catch((err) => console.error("[helloasso] places", err));
     }
+    // Kiddouch parrainé : payé, le Chabbat devient réservé.
+    if (m.kind === "pledge" && m.kiddouch && m.pledgeId) {
+      const { settleKiddushPledge } = await import("./kiddushServer");
+      await settleKiddushPledge(m.pledgeId).catch((err) => console.error("[helloasso] kiddouch", err));
+    }
     if (isTicket) {
       const evSnap = await db.collection("events").doc(m.eventId).get();
       if (evSnap.exists) {

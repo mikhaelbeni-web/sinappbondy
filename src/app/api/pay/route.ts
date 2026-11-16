@@ -4,6 +4,7 @@ import { remainingOf, round2 } from "@/lib/format";
 import { verifyPayTarget, type PayTarget } from "@/lib/payments";
 import { createCheckout } from "@/lib/helloasso";
 import { settleBooking } from "@/lib/seatingServer";
+import { settleKiddushPledge } from "@/lib/kiddushServer";
 
 // Lien de paiement public (envoyé par e-mail) : ?pledge=<id>&t=<signature>
 // ou ?donor=<id>&t=<signature> pour régler tout le solde du fidèle.
@@ -39,13 +40,25 @@ export async function GET(req: NextRequest) {
     let backPath: string | undefined;
 
     if (target.kind === "pledge") {
-      const snap = await db.collection("pledges").doc(target.id).get();
+      let snap = await db.collection("pledges").doc(target.id).get();
       if (!snap.exists) return NextResponse.redirect(`${appUrl}/merci?erreur=lien`, 303);
+      const isKiddush = (snap.data() as any).kind === "kiddouch";
+      if (isKiddush) {
+        // Parrainage : une garde expirée est d'abord libérée, on ne fait pas
+        // payer un Chabbat qui a pu être repris par quelqu'un d'autre.
+        await settleKiddushPledge(target.id);
+        snap = await db.collection("pledges").doc(target.id).get();
+        if (!snap.exists) return NextResponse.redirect(`${appUrl}/kiddouch?expire=1`, 303);
+      }
       const p = snap.data() as any;
       amount = remainingOf(p);
       label = `${p.catalogItemName} - ${p.serviceLabel}`;
       email = p.donorEmail;
       metadata = { kind: "pledge", pledgeId: p.id, donorId: p.donorId };
+      if (isKiddush) {
+        metadata.kiddouch = "1";
+        backPath = "/api/helloasso/cancel/{ref}";
+      }
     } else if (target.kind === "booking") {
       // Réservation de places : seulement les places de cette réservation.
       // Une garde expirée est d'abord libérée : on ne fait pas payer une

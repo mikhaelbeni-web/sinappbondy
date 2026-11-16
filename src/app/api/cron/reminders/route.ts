@@ -3,6 +3,7 @@ import { isRestDay, runReminders } from "@/lib/autoReminders";
 import { runHazkaraReminders } from "@/lib/hazkarot";
 import { confirmPendingCheckouts } from "@/lib/helloasso";
 import { publishedPlans, settlePendingSeats } from "@/lib/seatingServer";
+import { settlePendingKiddush } from "@/lib/kiddushServer";
 
 // Relances de dons et rappels de hazkara, appelé chaque jour par Vercel Cron (voir vercel.json). Vercel envoie
 // « Authorization: Bearer $CRON_SECRET » quand la variable est définie.
@@ -27,6 +28,8 @@ export async function GET(req: NextRequest) {
     } catch (err) {
       console.error("[cron/reminders] places", err);
     }
+    // Kiddouch gardés en ligne et jamais payés : libérés avant les relances.
+    await settlePendingKiddush().catch((err) => console.error("[cron/reminders] kiddouch", err));
     const result = await runReminders("cron", "Relance automatique");
     // Rappels de hazkara : même règle, rien le Chabbat ni les jours de fête.
     const rest = await isRestDay();

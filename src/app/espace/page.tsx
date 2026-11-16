@@ -171,6 +171,7 @@ function EspaceInner() {
             {data.kiddush.map((k: any) => (
               <div key={k.id} className="p-4 text-sm">
                 <p className="font-medium text-ink">{k.label} · Chabbat {k.parasha}</p>
+                {k.pending && <p className="text-xs text-amber-700">En attente de paiement : pas encore réservé</p>}
                 <p className="text-gray-500 first-letter:uppercase">{frDay(k.date)}{k.dedication ? ` · ${k.dedication}` : ""}</p>
               </div>
             ))}

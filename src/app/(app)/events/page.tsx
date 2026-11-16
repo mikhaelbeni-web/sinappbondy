@@ -10,6 +10,7 @@ const EMPTY = { title: "", description: "", date: "", location: "", price: "", c
 export default function EventsPage() {
   const { can } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -20,6 +21,7 @@ export default function EventsPage() {
     const res = await fetch("/api/events");
     const data = await res.json();
     setEvents(data.events || []);
+    setReservations(data.reservations || []);
     setLoading(false);
   }
 
@@ -88,6 +90,33 @@ export default function EventsPage() {
           <button type="submit" className="btn-primary">Créer l'événement</button>
         </form>
       )}
+
+      <div className="card">
+        <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="font-semibold text-ink">Kiddouch et salons réservés</h2>
+            <p className="text-sm text-gray-600">Kiddouch payés et salons confirmés, à venir. Non publiés sur le portail.</p>
+          </div>
+          {can("gerer_offices") && <Link href="/kiddouch-salons" className="btn-secondary shrink-0">Gérer</Link>}
+        </div>
+        <div className="divide-y">
+          {!loading && reservations.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune réservation à venir.</p>}
+          {reservations.map((r) => (
+            <div key={r.id} className="p-4 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <div className="min-w-0">
+                <p className="font-medium text-ink">
+                  <span className={`mr-2 rounded-full px-2 py-0.5 text-xs ${r.kind === "salon" ? "bg-ink/10 text-ink" : "bg-gold-sand/40 text-ink"}`}>{r.kind === "salon" ? "Salon" : "Kiddouch"}</span>
+                  {r.title}
+                </p>
+                <p className="text-gray-600 break-words">{r.who}{r.detail ? ` · ${r.detail}` : ""}</p>
+              </div>
+              <p className="text-gray-500 shrink-0 first-letter:uppercase">
+                {new Date(`${r.date}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="card divide-y">
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}

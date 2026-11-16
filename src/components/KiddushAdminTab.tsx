@@ -9,7 +9,7 @@ type Msg = { ok: boolean; text: string } | null;
 const frDate = (d: string) =>
   new Date(`${d}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
-// Administration > Kiddouch & salons : prix et textes des pages publiques
+// Back-office, menu Kiddouch & salons : prix et textes des pages publiques
 // /kiddouch et /salons, Chabbatot parrainés, demandes de salon à traiter.
 export default function KiddushAdminTab() {
   const [s, setS] = useState<KiddushSettings | null>(null);
@@ -125,7 +125,7 @@ export default function KiddushAdminTab() {
       {/* Chabbatot parrainés */}
       <div className="card p-4 space-y-3">
         <h2 className="font-semibold text-ink">Chabbatot parrainés</h2>
-        <p className="text-sm text-gray-600">Le règlement de chaque parrainage se suit dans Promesses, comme une promesse ordinaire.</p>
+        <p className="text-sm text-gray-600">Un Chabbat payant n'est réservé qu'une fois payé en ligne. Le paiement apparaît dans Encaissements.</p>
         {sponsors.length === 0 ? (
           <p className="text-sm text-gray-600">Aucun parrainage pour le moment.</p>
         ) : (
@@ -140,6 +140,9 @@ export default function KiddushAdminTab() {
                     {sp.optionLabel} ({sp.price > 0 ? formatEUR(sp.price) : "sur devis"}) · {sp.donorName}
                   </p>
                   {sp.dedication && <p className="text-gray-600 break-words">{sp.dedication}</p>}
+                  <p className={`text-xs mt-1 ${sp.pending ? "text-amber-700" : "text-green-700"}`}>
+                    {sp.pending ? "En attente de paiement : gardé quelques minutes, libéré automatiquement sans paiement" : sp.price > 0 ? "Payé, réservé" : "Réservé (sur devis)"}
+                  </p>
                 </div>
                 {sp.date >= today && (
                   <button type="button" className="btn-secondary shrink-0" disabled={busy === sp.id} onClick={() => release(sp)}>Libérer</button>
