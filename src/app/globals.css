@@ -14,15 +14,9 @@
   --ink-text-light: var(--ink-light);
 }
 
-/* Portail public des fidèles : bordeaux et or, fond ivoire. */
+/* Portail public des fidèles : bleu nuit de la maison sur fond pierre. */
 .theme-portail {
-  --ink: 91 20 36;
-  --ink-dark: 58 11 22;
-  --ink-light: 122 31 51;
-  --cream: 250 245 238;
-  --ink-text: 38 30 33;
-  --ink-text-dark: 24 18 20;
-  --ink-text-light: 74 60 64;
+  --cream: 239 233 223;
   color: rgb(var(--ink-text));
 }
 
