@@ -178,35 +178,50 @@ h1 {
 .sur-sombre .surtitre {
   color: #d9b877;
 }
-/* Bande sombre pleine largeur à l'intérieur d'une colonne centrée. Le fond
-   est porté par un pseudo-élément qui dépasse de 2,5rem en haut et en bas et
-   s'y fond dans la page : pas de cassure nette entre le sombre et l'ivoire. */
+/* Bande sombre pleine largeur à l'intérieur d'une colonne centrée : dégradé
+   du noir vers un bronze très sombre, bordé en haut et en bas d'un filet or
+   avec un losange central. Le fond est porté par un pseudo-élément. */
 .theme-portail main {
   overflow-x: clip;
 }
-.bande-sombre {
+.theme-portail .bande-sombre {
   position: relative;
   isolation: isolate;
-  padding: 3.5rem 0;
+  margin-top: 4.5rem;
+  margin-bottom: 4.5rem;
+  padding: 4.5rem 0;
 }
 .bande-sombre::before {
   content: "";
   position: absolute;
   z-index: -1;
-  top: -2.5rem;
-  bottom: -2.5rem;
+  top: 0;
+  bottom: 0;
   left: 50%;
   width: 100vw;
   transform: translateX(-50%);
-  background: linear-gradient(
-    to bottom,
-    rgb(var(--ink-dark) / 0) 0,
-    rgb(var(--ink-dark) / 0.5) 1.1rem,
-    rgb(var(--ink-dark)) 2.5rem,
-    rgb(var(--ink-dark)) calc(100% - 2.5rem),
-    rgb(var(--ink-dark) / 0.5) calc(100% - 1.1rem),
-    rgb(var(--ink-dark) / 0) 100%
-  );
+  background:
+    linear-gradient(90deg, rgb(201 164 108 / 0) 0, #c9a46c 22%, #e3c98f 50%, #c9a46c 78%, rgb(201 164 108 / 0) 100%) top / 100% 1.5px no-repeat,
+    linear-gradient(90deg, rgb(201 164 108 / 0) 0, #c9a46c 22%, #e3c98f 50%, #c9a46c 78%, rgb(201 164 108 / 0) 100%) bottom / 100% 1.5px no-repeat,
+    radial-gradient(60rem 26rem at 85% 0%, rgb(155 122 60 / 0.22), rgb(155 122 60 / 0) 70%),
+    radial-gradient(50rem 24rem at 10% 100%, rgb(120 88 40 / 0.2), rgb(120 88 40 / 0) 70%),
+    linear-gradient(115deg, #12151b 0%, #171a20 40%, #231f1a 75%, #2c2418 100%);
+}
+.bande-sombre .losange {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: #d9b877;
+  box-shadow: 0 0 0 5px #14181f, 0 0 0 6px rgb(217 184 119 / 0.7);
+}
+.bande-sombre .losange-haut {
+  top: 0;
+}
+.bande-sombre .losange-bas {
+  top: 100%;
 }
 .bande-sombre h2 {
   color: #fff;

@@ -169,6 +169,8 @@ export default async function PortalHome() {
 
         {/* Actions rapides */}
         <section aria-labelledby="titre-services-en-ligne" className="bande-sombre sur-sombre">
+          <span className="losange losange-haut" aria-hidden />
+          <span className="losange losange-bas" aria-hidden />
           <span className="surtitre text-center">Services</span>
           <h2 id="titre-services-en-ligne" className="text-4xl sm:text-5xl text-center mt-1"><MotOr text="En ligne" /></h2>
           <div className={`mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`}>
