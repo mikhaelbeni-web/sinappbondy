@@ -9,12 +9,27 @@ import PortalSettingsTab from "@/components/PortalSettingsTab";
 
 type Tab = "postes" | "equipe" | "association" | "journal" | "relances" | "paiements" | "louah" | "portail";
 
+const TAB_KEYS: Tab[] = ["postes", "equipe", "association", "journal", "relances", "paiements", "louah", "portail"];
+
 export default function AdminPage() {
   const { can, user } = useAuth();
   const isAdmin = !!user?.role?.isAdmin;
   const [tab, setTab] = useState<Tab>(
     can("gerer_postes") ? "postes" : can("gerer_paiements") ? "association" : can("envoyer_relances") ? "relances" : "louah"
   );
+
+  // La rubrique ouverte est dans l'adresse (?onglet=louah) : on peut la mettre
+  // en favori, la partager, et un rechargement ne ramène pas au début.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("onglet") as Tab | null;
+    if (wanted && TAB_KEYS.includes(wanted)) setTab(wanted);
+  }, []);
+  const selectTab = (key: Tab) => {
+    setTab(key);
+    const url = new URL(window.location.href);
+    url.searchParams.set("onglet", key);
+    window.history.replaceState(null, "", url);
+  };
 
   if (!can("gerer_equipe") && !can("gerer_postes") && !can("gerer_paiements") && !can("envoyer_relances") && !can("gerer_offices")) {
     return <p className="text-gray-500">Vous n'avez pas accès à l'administration.</p>;
@@ -34,19 +49,31 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-serif font-bold text-ink">Administration</h1>
-      <div className="flex gap-2 border-b overflow-x-auto whitespace-nowrap -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Ordinateur et tablette : pastilles qui passent à la ligne, toutes
+          visibles sans défilement horizontal. */}
+      {/* Téléphone : une liste déroulante, pour ne pas pousser le contenu
+          sous cinq rangées de pastilles. */}
+      <div className="sm:hidden">
+        <label className="label" htmlFor="adm-rubrique">Rubrique</label>
+        <select id="adm-rubrique" className="input font-semibold text-ink" value={tab} onChange={(e) => selectTab(e.target.value as Tab)}>
+          {tabs.filter((t) => t.show).map((t) => (
+            <option key={t.key} value={t.key}>{t.label}</option>
+          ))}
+        </select>
+      </div>
+      <nav aria-label="Rubriques de l'administration" className="hidden sm:flex flex-wrap gap-2">
         {tabs.filter((t) => t.show).map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`tap px-4 py-2 text-sm font-medium border-b-2 -mb-px shrink-0 ${
-              tab === t.key ? "border-gold text-ink" : "border-transparent text-gray-500 hover:text-ink"
-            }`}
+            type="button"
+            aria-current={tab === t.key ? "page" : undefined}
+            onClick={() => selectTab(t.key)}
+            className={tab === t.key ? "chip-active" : "chip"}
           >
             {t.label}
           </button>
         ))}
-      </div>
+      </nav>
 
       {tab === "postes" && can("gerer_postes") && <RolesTab />}
       {tab === "equipe" && can("gerer_equipe") && <TeamTab />}
@@ -129,17 +156,17 @@ function RolesTab() {
 
       {showForm && (
         <form onSubmit={handleCreate} className="card p-4 space-y-3">
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div>
-            <label className="label">Nom du poste</label>
-            <input required className="input max-w-sm" placeholder="ex : Trésorier" value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="label" htmlFor="adm-1">Nom du poste</label>
+            <input id="adm-1" required className="input max-w-sm" placeholder="ex : Trésorier" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label className="label">Autorisations</label>
+            <p className="label">Autorisations</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {PERMISSIONS.map((p) => (
                 <label key={p.key} className="tap flex items-start gap-2 text-sm bg-gray-50 rounded-md p-2">
-                  <input type="checkbox" checked={perms.includes(p.key)} onChange={() => togglePerm(p.key)} className="mt-1" />
+                  <input type="checkbox" checked={perms.includes(p.key)} onChange={() => togglePerm(p.key)} className="mt-0.5 w-5 h-5 accent-ink shrink-0" />
                   <span>
                     <span className="font-medium">{p.label}</span>
                     <br />
@@ -175,7 +202,7 @@ function RolesTab() {
                 )}
               </div>
               {!r.isAdmin && (
-                <button onClick={() => remove(r.id)} className="btn-danger text-xs px-2 py-1 shrink-0 self-start sm:self-auto">
+                <button onClick={() => remove(r.id)} className="btn-secondary !text-red-700 shrink-0 self-start sm:self-auto">
                   Supprimer
                 </button>
               )}
@@ -257,22 +284,22 @@ function TeamTab() {
 
       {showForm && (
         <form onSubmit={handleCreate} className="card p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {error && <p className="md:col-span-2 text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="md:col-span-2 text-sm text-red-600">{error}</p>}
           <div>
-            <label className="label">Nom</label>
-            <input required className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label className="label" htmlFor="adm-2">Nom</label>
+            <input id="adm-2" required className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
-            <label className="label">E-mail</label>
-            <input required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <label className="label" htmlFor="adm-3">E-mail</label>
+            <input id="adm-3" required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
-            <label className="label">Mot de passe provisoire</label>
-            <input required type="password" minLength={8} className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <label className="label" htmlFor="adm-4">Mot de passe provisoire</label>
+            <input id="adm-4" required type="password" minLength={8} className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </div>
           <div>
-            <label className="label">Poste</label>
-            <select required className="input" value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>
+            <label className="label" htmlFor="adm-5">Poste</label>
+            <select id="adm-5" required className="input" value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>
               <option value="">— Choisir —</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}{r.isAdmin ? " (tous accès)" : ""}</option>
@@ -292,16 +319,16 @@ function TeamTab() {
         {team.map((m) => (
           <div key={m.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
             <div className="min-w-0">
-              <p className={`font-medium ${m.active ? "text-ink" : "text-gray-400 line-through"}`}>{m.name}</p>
+              <p className={`font-medium ${m.active ? "text-ink" : "text-gray-500 line-through"}`}>{m.name}</p>
               <p className="text-gray-500 break-words">{m.email}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <select className="input w-full sm:w-40" value={m.roleId} onChange={(e) => changeRole(m.id, e.target.value)}>
+              <select aria-label={`Poste de ${m.name}`} className="input w-full sm:w-40" value={m.roleId} onChange={(e) => changeRole(m.id, e.target.value)}>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}{r.isAdmin ? " (tous accès)" : ""}</option>
                 ))}
               </select>
-              <button onClick={() => toggleActive(m.id, m.active)} className="btn-secondary text-xs px-2 py-1">
+              <button onClick={() => toggleActive(m.id, m.active)} className="btn-secondary">
                 {m.active ? "Désactiver" : "Activer"}
               </button>
             </div>
@@ -351,7 +378,7 @@ function PaymentsTab() {
           {status.sandbox && <span className="ml-2 text-amber-700 font-medium">(environnement de test)</span>}
         </p>
       )}
-      {status?.error && <p className="text-sm text-red-600 break-words">{status.error}</p>}
+      {status?.error && <p role="alert" className="text-sm text-red-600 break-words">{status.error}</p>}
       <p className="text-sm text-gray-600 break-all">Adresse de l&apos;appli (NEXT_PUBLIC_APP_URL) : {status?.appUrl || "manquante"}</p>
       <p className="text-sm text-gray-600 break-all">
         Serveur HelloAsso utilisé : {status?.apiHost}
@@ -366,7 +393,7 @@ function PaymentsTab() {
             HelloAsso accepte les paiements. <a className="underline" href={test.redirectUrl} target="_blank" rel="noreferrer">Ouvrir la page de paiement test</a> (rien n&apos;est enregistré dans l&apos;appli).
           </p>
         )}
-        {test && !test.ok && <p className="text-sm text-red-600 break-words">{test.error}</p>}
+        {test && !test.ok && <p role="alert" className="text-sm text-red-600 break-words">{test.error}</p>}
       </div>
       <div className="text-sm text-gray-500 pt-2 border-t">
         <p>URL de notification à déclarer dans HelloAsso (Mon compte &gt; Intégrations et API) :</p>
@@ -465,21 +492,21 @@ function AssociationTab() {
       </div>
 
       <div className="card p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {error && <p className="sm:col-span-2 text-sm text-red-600">{error}</p>}
-        {message && <p className="sm:col-span-2 text-sm text-green-700">{message}</p>}
+        {error && <p role="alert" className="sm:col-span-2 text-sm text-red-600">{error}</p>}
+        {message && <p role="status" className="sm:col-span-2 text-sm text-green-700">{message}</p>}
         {ASSOCIATION_FIELDS.map((f) => (
           <div key={f.key} className={f.wide ? "sm:col-span-2" : ""}>
-            <label className="label">{f.label}</label>
-            <input className="input" placeholder={f.placeholder} value={form[f.key] || ""} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+            <label className="label" htmlFor={`asso-${f.key}`}>{f.label}</label>
+            <input id={`asso-${f.key}`} className="input" placeholder={f.placeholder} value={form[f.key] || ""} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
           </div>
         ))}
         <div className="sm:col-span-2">
-          <label className="label">Objet de l'association (tel qu'inscrit dans les statuts)</label>
-          <textarea className="input" rows={2} value={form.object || ""} onChange={(e) => setForm({ ...form, object: e.target.value })} />
+          <label className="label" htmlFor="adm-7">Objet de l'association (tel qu'inscrit dans les statuts)</label>
+          <textarea id="adm-7" className="input" rows={2} value={form.object || ""} onChange={(e) => setForm({ ...form, object: e.target.value })} />
         </div>
         <div className="sm:col-span-2">
-          <label className="label">Qualité de l'organisme (case cochée sur le reçu)</label>
-          <select className="input" value={form.category || ""} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+          <label className="label" htmlFor="adm-8">Qualité de l'organisme (case cochée sur le reçu)</label>
+          <select id="adm-8" className="input" value={form.category || ""} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             <option value="">— Choisir —</option>
             {ASSOCIATION_CATEGORIES.map((c) => (
               <option key={c.key} value={c.key}>{c.label}</option>
@@ -496,9 +523,9 @@ function AssociationTab() {
           ] as const
         ).map(([key, label]) => (
           <div key={key} className="sm:col-span-2">
-            <label className="label">{label}</label>
+            <label className="label" htmlFor={`asso-${key}`}>{label}</label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <input type="file" accept="image/png,image/jpeg" onChange={(e) => onImage(key, e.target.files?.[0])} className="tap text-sm" />
+              <input id={`asso-${key}`} type="file" accept="image/png,image/jpeg" onChange={(e) => onImage(key, e.target.files?.[0])} className="tap block w-full text-sm text-gray-700 file:mr-3 file:rounded-full file:border-0 file:bg-cream file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-gold-sand/40 file:cursor-pointer" />
               {form[key] && (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -512,7 +539,7 @@ function AssociationTab() {
           </div>
         ))}
         <label className="sm:col-span-2 tap flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" checked={!!form.autoReceipt} onChange={(e) => setForm({ ...form, autoReceipt: e.target.checked })} />
+          <input type="checkbox" className="mt-0.5 w-5 h-5 accent-ink shrink-0" checked={!!form.autoReceipt} onChange={(e) => setForm({ ...form, autoReceipt: e.target.checked })} />
           <span>Envoyer automatiquement un reçu fiscal à chaque paiement. Décochez pour n'émettre qu'un reçu récapitulatif annuel.</span>
         </label>
         <div className="sm:col-span-2">
@@ -580,21 +607,21 @@ function RemindersTab() {
           solde avec un lien de paiement. Pas d'envoi le Chabbat ni les jours de fête.
         </p>
         <label className="tap flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={!!form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
+          <input type="checkbox" className="w-5 h-5 accent-ink shrink-0" checked={!!form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
           Activer les relances automatiques
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="label">1re relance après (jours)</label>
-            <input type="number" min="0" className="input" value={form.firstDelayDays} onChange={(e) => setForm({ ...form, firstDelayDays: e.target.value })} />
+            <label className="label" htmlFor="adm-10">1re relance après (jours)</label>
+            <input id="adm-10" type="number" min="0" className="input" value={form.firstDelayDays} onChange={(e) => setForm({ ...form, firstDelayDays: e.target.value })} />
           </div>
           <div>
-            <label className="label">Puis tous les (jours)</label>
-            <input type="number" min="1" className="input" value={form.repeatEveryDays} onChange={(e) => setForm({ ...form, repeatEveryDays: e.target.value })} />
+            <label className="label" htmlFor="adm-11">Puis tous les (jours)</label>
+            <input id="adm-11" type="number" min="1" className="input" value={form.repeatEveryDays} onChange={(e) => setForm({ ...form, repeatEveryDays: e.target.value })} />
           </div>
           <div>
-            <label className="label">Relances max par promesse</label>
-            <input type="number" min="1" className="input" value={form.maxReminders} onChange={(e) => setForm({ ...form, maxReminders: e.target.value })} />
+            <label className="label" htmlFor="adm-12">Relances max par promesse</label>
+            <input id="adm-12" type="number" min="1" className="input" value={form.maxReminders} onChange={(e) => setForm({ ...form, maxReminders: e.target.value })} />
           </div>
         </div>
         {!data.cronConfigured && (
@@ -683,41 +710,41 @@ function LouahTab() {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="label">Titre affiché</label>
-          <input className="input" value={s.title} onChange={(e) => setS({ ...s, title: e.target.value })} placeholder="ex : Synagogue de Bondy" />
+          <label className="label" htmlFor="adm-13">Titre affiché</label>
+          <input id="adm-13" className="input" value={s.title} onChange={(e) => setS({ ...s, title: e.target.value })} placeholder="ex : Synagogue de Bondy" />
         </div>
         <div>
-          <label className="label">Ville (zmanim)</label>
-          <input className="input" value={s.city} onChange={(e) => setS({ ...s, city: e.target.value })} />
+          <label className="label" htmlFor="adm-14">Ville (zmanim)</label>
+          <input id="adm-14" className="input" value={s.city} onChange={(e) => setS({ ...s, city: e.target.value })} />
         </div>
         <div>
-          <label className="label">Latitude</label>
-          <input type="number" step="0.0001" className="input" value={s.latitude} onChange={(e) => setS({ ...s, latitude: e.target.value })} />
+          <label className="label" htmlFor="adm-15">Latitude</label>
+          <input id="adm-15" type="number" step="0.0001" className="input" value={s.latitude} onChange={(e) => setS({ ...s, latitude: e.target.value })} />
         </div>
         <div>
-          <label className="label">Longitude</label>
-          <input type="number" step="0.0001" className="input" value={s.longitude} onChange={(e) => setS({ ...s, longitude: e.target.value })} />
+          <label className="label" htmlFor="adm-16">Longitude</label>
+          <input id="adm-16" type="number" step="0.0001" className="input" value={s.longitude} onChange={(e) => setS({ ...s, longitude: e.target.value })} />
         </div>
         <div>
-          <label className="label">Allumage (minutes avant le coucher du soleil)</label>
-          <input type="number" className="input" value={s.candleMinutes} onChange={(e) => setS({ ...s, candleMinutes: e.target.value })} />
+          <label className="label" htmlFor="adm-17">Allumage (minutes avant le coucher du soleil)</label>
+          <input id="adm-17" type="number" className="input" value={s.candleMinutes} onChange={(e) => setS({ ...s, candleMinutes: e.target.value })} />
         </div>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 text-sm">
         <label className="tap flex items-center gap-2">
-          <input type="checkbox" checked={s.showZmanim} onChange={(e) => setS({ ...s, showZmanim: e.target.checked })} /> Afficher les zmanim
+          <input type="checkbox" className="w-5 h-5 accent-ink shrink-0" checked={s.showZmanim} onChange={(e) => setS({ ...s, showZmanim: e.target.checked })} /> Afficher les zmanim
         </label>
         <label className="tap flex items-center gap-2">
-          <input type="checkbox" checked={s.showHazkarot} onChange={(e) => setS({ ...s, showHazkarot: e.target.checked })} /> Afficher les hazkarot (nom du défunt et date)
+          <input type="checkbox" className="w-5 h-5 accent-ink shrink-0" checked={s.showHazkarot} onChange={(e) => setS({ ...s, showHazkarot: e.target.checked })} /> Afficher les hazkarot (nom du défunt et date)
         </label>
       </div>
       <div>
-        <label className="label">Horaires des offices</label>
+        <label className="label" htmlFor="adm-18">Horaires des offices</label>
         <div className="space-y-2">
           {s.times.map((t: any, i: number) => (
             <div key={i} className="flex flex-col sm:flex-row gap-2">
-              <input className="input" placeholder="ex : Cha'harit en semaine" value={t.label} onChange={(e) => setTime(i, "label", e.target.value)} />
-              <input className="input sm:w-40" placeholder="ex : 7h00" value={t.value} onChange={(e) => setTime(i, "value", e.target.value)} />
+              <input id="adm-18" className="input" placeholder="ex : Cha'harit en semaine" value={t.label} onChange={(e) => setTime(i, "label", e.target.value)} />
+              <input className="input sm:w-40" aria-label={`Office ${i + 1} : heure`} placeholder="ex : 7h00" value={t.value} onChange={(e) => setTime(i, "value", e.target.value)} />
               <button className="text-red-600 hover:underline text-sm shrink-0 text-left tap" onClick={() => setS({ ...s, times: s.times.filter((_: any, j: number) => j !== i) })}>
                 Retirer
               </button>
@@ -729,8 +756,8 @@ function LouahTab() {
         </div>
       </div>
       <div>
-        <label className="label">Annonces (une par ligne)</label>
-        <textarea className="input" rows={4} value={s.announcements} onChange={(e) => setS({ ...s, announcements: e.target.value })} />
+        <label className="label" htmlFor="adm-19">Annonces (une par ligne)</label>
+        <textarea id="adm-19" className="input" rows={4} value={s.announcements} onChange={(e) => setS({ ...s, announcements: e.target.value })} />
       </div>
       {message && <p className="text-sm text-gray-700">{message}</p>}
       <button className="btn-primary" disabled={saving} onClick={save}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
@@ -803,7 +830,7 @@ function ReceiptAuditTab() {
           <h2 className="font-semibold text-ink">Journal des reçus fiscaux</h2>
           <p className="text-xs text-gray-500">Chaque modification, suppression, annulation, remplacement ou remise : qui, quand, avant/après et motif.</p>
         </div>
-        <select className="input w-full sm:w-32" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+        <select aria-label="Année du journal" className="input w-full sm:w-32" value={year} onChange={(e) => setYear(Number(e.target.value))}>
           {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
@@ -811,7 +838,7 @@ function ReceiptAuditTab() {
       </div>
       <div className="divide-y">
         {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
-        {error && <p className="p-4 text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="p-4 text-sm text-red-600">{error}</p>}
         {!loading && !error && entries.length === 0 && <p className="p-4 text-sm text-gray-500">Aucune action enregistrée pour {year}.</p>}
         {entries.map((e) => (
           <div key={e.id} className="p-4 text-sm">
@@ -921,7 +948,7 @@ function TestResetCard({ onChange }: { onChange: () => void }) {
           C'est impossible dès qu'un seul reçu n'est pas marqué test : un vrai reçu ne doit jamais disparaître.
         </p>
       </div>
-      {error && <p className="p-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="p-4 text-sm text-red-600">{error}</p>}
       {!data && !error && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
       {data && items.length === 0 && (
         <p className="p-4 text-sm text-gray-500">Aucun reçu en {year}. Le prochain reçu portera le n° {year}/{String(data.counter + 1).padStart(5, "0")}.</p>
@@ -939,7 +966,7 @@ function TestResetCard({ onChange }: { onChange: () => void }) {
                 {i.external && <span className="block text-xs text-amber-700">Sorti de l'association : {i.external}</span>}
               </span>
               <span className="flex items-center gap-2 shrink-0">
-                <input type="checkbox" checked={i.test} disabled={!!busy} onChange={() => toggle(i)} />
+                <input type="checkbox" className="w-5 h-5 accent-ink shrink-0" checked={i.test} disabled={!!busy} onChange={() => toggle(i)} />
                 Reçu de test
               </span>
             </label>
