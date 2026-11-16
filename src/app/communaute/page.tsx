@@ -14,7 +14,7 @@ export default async function CommunautePage() {
 
   return (
     <PortalShell portal={portal}>
-      <PortalHero eyebrow="Communauté" title="La vie de la communauté" subtitle="Prières, cours, enfants, fêtes de famille et entraide." />
+      <PortalHero photo={portal.heroPhoto} eyebrow="Communauté" title="La vie de la communauté" subtitle="Prières, cours, enfants, fêtes de famille et entraide." />
       <div className="max-w-6xl mx-auto px-4 -mt-8 space-y-12">
         <section aria-label="Activités" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {portal.services.map((s) => (

@@ -12,7 +12,7 @@ export default async function AProposPage() {
   const photo = portal.photos.find((p) => p.category === "synagogue");
   return (
     <PortalShell portal={portal}>
-      <PortalHero eyebrow="À propos" title="Notre histoire" subtitle={portal.tagline} />
+      <PortalHero photo={portal.heroPhoto} eyebrow="À propos" title="Notre histoire" subtitle={portal.tagline} />
       <div className="max-w-6xl mx-auto px-4 -mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <article className="card p-6 lg:col-span-2 space-y-4 text-gray-700 leading-relaxed">
           {portal.history.split(/\n\s*\n/).map((para, i) => (

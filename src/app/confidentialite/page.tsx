@@ -25,7 +25,7 @@ export default async function ConfidentialitePage() {
 
   return (
     <PortalShell portal={portal}>
-      <PortalHero title="Politique de confidentialité" />
+      <PortalHero photo={portal.heroPhoto} title="Politique de confidentialité" />
       <div className="max-w-4xl mx-auto px-4 -mt-8">
         <div className="card p-6 space-y-6 text-sm text-gray-700 leading-relaxed">
           <section>

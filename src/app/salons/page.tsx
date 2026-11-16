@@ -13,7 +13,7 @@ export default async function SalonsPage() {
   const photos = portal.photos.filter((p) => p.category === "salons").slice(0, 3);
   return (
     <PortalShell portal={portal}>
-      <PortalHero eyebrow="Salle de réception" title="Les Salons Ha'Hyda" subtitle={settings.salonsCapacity ? `Cérémonies et réceptions, ${settings.salonsCapacity}.` : "Cérémonies et réceptions."} />
+      <PortalHero photo={portal.heroPhoto} eyebrow="Salle de réception" title="Les Salons Ha'Hyda" subtitle={settings.salonsCapacity ? `Cérémonies et réceptions, ${settings.salonsCapacity}.` : "Cérémonies et réceptions."} />
       <div className="max-w-4xl mx-auto px-4 -mt-8 space-y-5">
         <SalonRequestForm />
         {photos.length > 0 && (
