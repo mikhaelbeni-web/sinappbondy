@@ -50,6 +50,59 @@ const months = Array.from({ length: 12 }, (_, i) => {
 
 const schedule = { 0: [{ start: "19:00", end: "22:00" }], 1: [], 2: [{ start: "20:00", end: "22:30" }, { start: "06:00", end: "07:30" }], 3: [], 4: [{ start: "20:00", end: "22:00" }], 5: [], 6: [] };
 
+
+// Plan de salle dessiné (éditeur) : deux blocs de rangées face à face,
+// une rangée verticale le long du mur, comme le plan validé de la synagogue.
+const LETTERS = "ABCDEFGHILMNOPQR";
+const layoutRows = [];
+let num = 1;
+for (let i = 0; i < 9; i++) {
+  layoutRows.push({ id: `rg${num}`, num, letter: LETTERS[i], sectionId: "hommes", n: 8, x: 60, y: 140 + i * 34, dir: "h", removed: [], rev: false, lab: "start" }); num++;
+  layoutRows.push({ id: `rg${num}`, num, letter: LETTERS[i] + "'", sectionId: "hommes", n: 8, x: 420, y: 140 + i * 34, dir: "h", removed: i === 0 ? [7] : [], rev: true, lab: "end" }); num++;
+}
+layoutRows.push({ id: `rg${num}`, num, letter: "V", sectionId: "femmes", n: 17, x: 10, y: 140, dir: "v", removed: [], rev: false, lab: "start" });
+const layout = {
+  seat: { w: 28, d: 22, gap: 2 },
+  walls: [[0, 0], [700, 0], [700, 700], [0, 700]],
+  elements: [
+    { id: "e1", type: "aron", name: "Aron Hakodech", x: 300, y: 10, w: 100, h: 40 },
+    { id: "e2", type: "teva", name: "Téva", x: 310, y: 300, w: 80, h: 80 },
+    { id: "e3", type: "porte", name: "Entrée", x: 320, y: 680, w: 60, h: 20 },
+  ],
+  rows: layoutRows,
+};
+const drawnPlan = {
+  id: "pl2", name: "Plan de base de la grande salle (Chabbat et fêtes)", drawn: true, layout, published: true, salesOpen: true, maxPerDonor: 6, isBase: true, active: true,
+  sections: [{ id: "hommes", name: "Hommes", price: 150, rows: 0, seatsPerRow: 0 }, { id: "femmes", name: "Femmes", price: 0, rows: 0, seatsPerRow: 0 }],
+};
+
+const kiddushSettings = {
+  enabled: true,
+  intro: "Le kiddouch du Chabbat matin est un moment de partage pour toute la communauté. Parrainez-le à l'occasion d'une naissance, d'une Bar Mitsva, d'un mariage ou d'une hazkara.",
+  options: [{ key: "kiddouch", label: "Kiddouch du Chabbat matin", price: 180 }, { key: "seouda", label: "Séouda chlichit", price: 100 }],
+  weeksAhead: 26, salonsEnabled: true,
+  salonsIntro: "Les Salons Ha'Hyda accueillent vos cérémonies et réceptions.",
+  salonsCapacity: "150 à 200 personnes",
+  salonEventTypes: ["Mariage", "Fiançailles", "Bar Mitsva", "Bat Mitsva", "Brit Mila", "Hazkara", "Autre"],
+  notifyEmail: "secretariat.synagogue@example.org", updatedAt: "",
+};
+const PARASHOT = [["Vayetse", "ויצא"], ["Vayichla'h", "וישלח"], ["Vayechev", "וישב"], ["Mikets", "מקץ"], ["Vayigach", "ויגש"], ["Vaye'hi", "ויחי"]];
+const kiddushSlots = PARASHOT.map(([parasha, parashaHe], i) => {
+  const d = new Date(Date.UTC(2026, 10, 21 + i * 7));
+  return { date: d.toISOString().slice(0, 10), parasha, parashaHe, taken: i === 1 ? ["kiddouch"] : i === 2 ? ["kiddouch", "seouda"] : [] };
+});
+
+const portal = {
+  displayName: "Hehal Ha'Hida Hakadosh", tagline: "Synagogue de Bondy",
+  intro: "Horaires des offices, fêtes, dons, places et vie de la communauté.",
+  phone: "01 48 47 50 79", email: "contact@hhh-bondy.com", address: "28 avenue de la Villageoise", postalCode: "93140", city: "Bondy",
+  history: "Premier paragraphe.\n\nSecond paragraphe.",
+  services: [{ title: "Offices quotidiens", text: "Cha'harit, Min'ha et Arvit chaque jour." }, { title: "Salons Ha'Hyda", text: "Une salle de réception de 150 à 200 personnes." }],
+  heroPhoto: "/portail/salle-priere.jpg",
+  photos: [{ src: "/portail/salle-priere.jpg", alt: "La salle de prière", category: "synagogue", width: 1600, height: 1200 }, { src: "/portail/salons-table.jpg", alt: "Les salons", category: "salons", width: 1200, height: 630 }],
+  updatedAt: "",
+};
+
 const routes = {
   "/api/me": { user },
   "/api/setup": { needsSetup: false },
@@ -108,7 +161,7 @@ const routes = {
     history: [{ subject: "Horaires des offices de Souccot et du kiddouch communautaire", sentAt: "2026-10-01T10:00:00Z", audience: { type: "groupes", groups: ["Conseil", "Jeunes"] }, sent: 120, failed: 2, sentBy: "Mikhael Benichou" }],
     groups: ["Conseil", "Jeunes", "Cours du mardi"], count: 118,
   },
-  "/api/seating": { plans: [{ id: "pl1", name: "Roch Hachana et Kippour 5787", sections: [{ name: "Hommes" }, { name: "Femmes" }], assigned: 42, capacity: 216 }] },
+  "/api/seating": { plans: [{ id: "pl1", name: "Roch Hachana et Kippour 5787", sections: [{ name: "Hommes" }, { name: "Femmes" }], assigned: 42, capacity: 216 }, { id: "pl2", name: drawnPlan.name, drawn: true, published: true, salesOpen: true, isBase: true, sections: drawnPlan.sections, assigned: 2, capacity: 160 }] },
   "/api/seating/pl1": {
     plan: { id: "pl1", name: "Roch Hachana et Kippour 5787", sections: [{ id: "hommes", name: "Hommes", rows: 4, seatsPerRow: 12, price: 150 }, { id: "femmes", name: "Femmes", rows: 3, seatsPerRow: 12, price: 150 }] },
     seats: [{ id: "pl1_hommes_1_1", planId: "pl1", sectionId: "hommes", row: 1, seat: 1, donorId: "d1", donorName: "Jean-Baptiste Abergel-Benhamou", remaining: 150, pledgeId: "x", confirmedAt: null }],
@@ -143,6 +196,28 @@ const routes = {
     runs: [{ at: "2026-10-22T08:00:00Z", trigger: "cron", sent: 4, failed: [] }],
     cronConfigured: true, restDay: null,
   },
+
+  "/api/seating/pl2": {
+    plan: drawnPlan,
+    seats: [
+      { id: "pl2_hommes_1_1", planId: "pl2", sectionId: "hommes", row: 1, seat: 1, donorId: "d1", donorName: "Jean-Baptiste Abergel-Benhamou", remaining: 150, pledgeId: "x", confirmedAt: null },
+      { id: "pl2_hommes_2_3", planId: "pl2", sectionId: "hommes", row: 2, seat: 3, donorId: "d2", donorName: "Sarah Cohen", remaining: 0, pledgeId: "y", confirmedAt: "2026-11-01", pending: true, selfBooked: true },
+    ],
+  },
+  "/api/kiddush": {
+    settings: kiddushSettings,
+    sponsors: [
+      { id: "k1", date: kiddushSlots[1].date, parasha: "Vayichla'h", optionLabel: "Kiddouch du Chabbat matin", donorName: "Jean-Baptiste Abergel-Benhamou", dedication: "À la mémoire de Rahel bat Messaouda Abergel, que son âme repose en paix", price: 180, pending: false },
+      { id: "k2", date: kiddushSlots[2].date, parasha: "Vayechev", optionLabel: "Séouda chlichit", donorName: "Sarah Cohen", dedication: "", price: 100, pending: true },
+    ],
+    salons: [{ id: "sr1", date: "2027-01-17", name: "Famille Abergel-Benhamou", email: "jean-baptiste.abergel-benhamou@exemple-tres-long.fr", phone: "06 12 34 56 78", eventType: "Bar Mitsva", guests: 180, message: "Réception après l'office, avec buffet. Merci de nous rappeler en soirée.", status: "nouvelle" }],
+  },
+  "/api/portal": { portal, defaults: portal },
+  "/api/public/kiddush": { enabled: true, intro: kiddushSettings.intro, options: kiddushSettings.options, slots: kiddushSlots, known: false },
+  "/api/public/seating": {
+    plans: [{ id: "pl2", name: drawnPlan.name, salesOpen: true, max: 6, sections: drawnPlan.sections.map(({ id, name, price }) => ({ id, name, price })), layout, taken: ["1:1", "1:2", "2:3", "3:5"], mine: [] }],
+    due: 0, balanceUrl: null, signedIn: false,
+  },
   "/api/payments": { hasClientId: true, hasClientSecret: true, organizationSlug: "acib-bondy", organizationName: "Association Culturelle et d'Instruction de Bondy", sandbox: false, webhookUrl: "https://sinappbondy.vercel.app/api/helloasso/webhook" },
   "/api/louah": {
     settings: { title: "Synagogue de Bondy", city: "Bondy", latitude: 48.9, longitude: 2.48, candleMinutes: 18, showZmanim: true, showHazkarot: true, times: [{ label: "Cha'harit en semaine", value: "7h00" }], announcements: "Kiddouch offert par la famille Cohen" },
@@ -157,11 +232,16 @@ const routes = {
     days: [{ date: "2026-10-25", slots: ["19:00", "19:30", "20:00", "20:30", "21:00", "21:30"].map((t, i) => ({ time: t, free: i !== 2 })) }],
   },
   "/api/espace/me": {
-    donor: { firstName: "Jean-Baptiste", lastName: "Abergel-Benhamou", hasAddress: true },
+    donor: { firstName: "Jean-Baptiste", lastName: "Abergel-Benhamou", email: "jean-baptiste.abergel-benhamou@exemple-tres-long.fr", phone: "06 12 34 56 78", address: "28 avenue de la Villageoise", postalCode: "93140", city: "Bondy", hasAddress: true },
     balance: 1380, balanceUrl: "http://localhost:3000/api/pay?t=abc",
     pledges: [{ id: "p1", label: "Ouverture du Heikhal pour la sortie du Séfer", service: "Roch Hachana, 1er jour (Cha'harit)", date: "2026-09-23", amount: 1800, remaining: 1200, status: "partiel" }],
     receipts: [{ id: "r1", number: "2026/00001", kind: "unitaire", year: 2026, issuedAt: "2026-10-01", amount: 600 }],
     payments: [{ id: "t1", date: "2026-10-01", method: "cheque", amount: 600 }],
+    seats: [{ id: "pl2_hommes_1_1", plan: drawnPlan.name, label: "Hommes, rangée A, place 1", remaining: 150, pending: false }],
+    kiddush: [{ id: "k1", date: kiddushSlots[1].date, parasha: "Vayichla'h", label: "Kiddouch du Chabbat matin", dedication: "À la mémoire de Rahel bat Messaouda Abergel", pending: false }],
+    salons: [{ id: "sr1", date: "2027-01-17", eventType: "Bar Mitsva", guests: 180, status: "nouvelle" }],
+    hazkarot: [{ id: "h1", name: "Rahel bat Messaouda Abergel", relation: "grand-mère", hebrewDate: "17 Adar 5761", next: "2027-02-24", nextHebrew: "17 Adar 5787" }],
+    seatingPlans: [{ id: "pl2", name: drawnPlan.name, salesOpen: true }],
   },
   "/api/public/louah": {
     title: "Synagogue de Bondy", civilDate: "2026-10-23", hebrewDate: "12 Hechvan 5787", hebrewDateHe: "י״ב חשון תשפ״ז",

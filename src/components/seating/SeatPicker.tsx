@@ -222,9 +222,7 @@ export default function SeatPicker() {
       )}
 
       <div className="card p-4 space-y-3">
-        <div className="overflow-x-auto">
-          <RoomPlanView layout={plan.layout} look={look} onSeat={step === "choose" ? click : undefined} />
-        </div>
+        <RoomPlanView layout={plan.layout} look={look} onSeat={step === "choose" ? click : undefined} />
         <div className="flex flex-wrap gap-4 text-xs text-gray-600">
           <span><span className="inline-block w-3 h-3 border border-gray-500 bg-white align-middle mr-1" />Libre</span>
           <span><span className="inline-block w-3 h-3 bg-gold align-middle mr-1" />Sélectionnée</span>

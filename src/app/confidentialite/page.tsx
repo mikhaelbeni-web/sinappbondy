@@ -36,8 +36,21 @@ export default async function ConfidentialitePage() {
           </section>
           <section>
             <h2 className="font-bold text-ink text-base">Données collectées et finalités</h2>
-            <div className="mt-3 overflow-x-auto -mx-2 px-2">
-              <table className="w-full text-left min-w-[560px]">
+            {/* Téléphone : une fiche par traitement ; tableau à partir de 640 px. */}
+            <ul className="mt-3 space-y-3 sm:hidden">
+              {rows.map((r) => (
+                <li key={r[0]} className="rounded-xl border border-gray-100 p-3">
+                  <p className="font-semibold text-ink">{r[0]}</p>
+                  <dl className="mt-1 space-y-1">
+                    <div><dt className="inline text-xs uppercase text-gray-500">Données : </dt><dd className="inline">{r[1]}</dd></div>
+                    <div><dt className="inline text-xs uppercase text-gray-500">Base légale : </dt><dd className="inline">{r[2]}</dd></div>
+                    <div><dt className="inline text-xs uppercase text-gray-500">Durée : </dt><dd className="inline">{r[3]}</dd></div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 hidden sm:block">
+              <table className="w-full text-left">
                 <caption className="sr-only">Traitements de données personnelles</caption>
                 <thead className="text-xs uppercase text-gray-500">
                   <tr>

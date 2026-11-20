@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Minus, Plus, Maximize2 } from "lucide-react";
 import { layoutSeats, type LayoutSeat, type RoomLayout } from "@/lib/roomLayout";
 
 // Plan de salle dessiné, en lecture : murs, éléments (Aron, téva, portes…)
 // et places cliquables. L'appelant donne l'apparence de chaque place.
+// Zoom : sur ordinateur, le plan tient dans la largeur. Sur écran tactile, il
+// s'ouvre agrandi (places d'au moins 28 px, au lieu de 15 à 20 px ajustées à un
+// téléphone) et défile dans son cadre ; les boutons − / + / Vue d'ensemble
+// changent l'échelle.
 export interface SeatLook {
   fill: string;
   stroke: string;
@@ -62,10 +67,55 @@ export default function RoomPlanView({
   );
   const wallPath = "M" + layout.walls.map((p) => p.join(" ")).join(" L") + " Z";
 
+  // Échelle en pixels par unité du plan ; null = ajusté à la largeur du cadre.
+  const wrap = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number | null>(null);
+  const [touch, setTouch] = useState(false);
+  const minSeat = useMemo(() => (seats.length ? Math.min(...seats.map((s) => Math.min(s.w, s.h))) : 20), [seats]);
+  const fitScale = () => (wrap.current ? wrap.current.clientWidth / box.w : 1);
+  useEffect(() => {
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    setTouch(coarse);
+    if (coarse) {
+      const comfy = 28 / minSeat;
+      setScale(comfy > fitScale() ? comfy : null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minSeat, box.w]);
+  const zoom = (f: number) => {
+    const cur = scale ?? fitScale();
+    const next = Math.min(Math.max(cur * f, fitScale()), 48 / minSeat);
+    setScale(next <= fitScale() + 0.001 ? null : next);
+  };
+  const width = scale ? Math.round(box.w * scale) : undefined;
+  // Plan agrandi : on centre la vue (Aron et téva au milieu), pas le bord gauche.
+  useEffect(() => {
+    const el = wrap.current;
+    if (el && width) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+  }, [width]);
+
   return (
+    <div className="space-y-2">
+      {(touch || scale) && (
+        <div className="flex items-center justify-end gap-2 print:hidden">
+          <span className="text-xs text-gray-500 mr-auto">{scale ? "Glissez pour parcourir le plan." : ""}</span>
+          <button type="button" className="btn-secondary px-3 min-w-[44px] justify-center" onClick={() => zoom(1 / 1.3)} disabled={!scale} aria-label="Réduire le plan">
+            <Minus className="w-5 h-5 text-ink" aria-hidden />
+          </button>
+          <button type="button" className="btn-secondary px-3 min-w-[44px] justify-center" onClick={() => zoom(1.3)} disabled={!!scale && scale >= 48 / minSeat - 0.001} aria-label="Agrandir le plan">
+            <Plus className="w-5 h-5 text-ink" aria-hidden />
+          </button>
+          <button type="button" className="btn-secondary px-3 min-w-[44px] justify-center" onClick={() => setScale(null)} disabled={!scale} aria-label="Vue d'ensemble du plan">
+            <Maximize2 className="w-5 h-5 text-ink" aria-hidden />
+          </button>
+        </div>
+      )}
+      <div ref={wrap} className="overflow-x-auto overscroll-x-contain">
     <svg
       viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
-      className="w-full h-auto max-h-[85vh] min-w-[640px] select-none"
+      className={`${width ? "max-w-none" : "w-full h-auto max-h-[85vh]"} select-none block`}
+      width={width}
+      height={width ? Math.round(box.h * (scale as number)) : undefined}
       role="group"
       aria-label="Plan de la salle"
       style={{ fontFamily: "Montserrat, Arial, sans-serif" }}
@@ -121,5 +171,7 @@ export default function RoomPlanView({
         );
       })}
     </svg>
+      </div>
+    </div>
   );
 }
