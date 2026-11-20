@@ -1,90 +1,64 @@
-# Audit responsive mobile — 23 octobre 2026
+# Audit responsive — 20 novembre 2026
 
-Périmètre : 45 états de pages (liste dans `pages.md`) × 8 appareils, soit 359 combinaisons
-(le tiroir de menu n'est testé que sur téléphone). Appareils : Galaxy S9+ (320 px), Galaxy S8
-(360 px), iPhone SE (375 px), iPhone 13 (390 px), Pixel 7 (412 px), iPhone 14 Pro Max (430 px),
-iPhone 13 en paysage (844 px) et iPad Mini (768 px).
+Deuxième passage, après le premier audit du 23 octobre (PR #8). Il couvre toutes les pages ajoutées depuis :
+portail public des fidèles (accueil, horaires, places, kiddouch, salons, galerie, à propos, communauté, mentions,
+confidentialité), plan de salle dessiné, éditeur de plan (iframe), Kiddouch & salons, onglets Journal et Portail
+de l'Administration. Données fictives (`qa-mobile/fixtures.cjs`), aucun appel à Firebase, HelloAsso ni aux e-mails.
+
+Périmètre : 62 états de pages (`pages.md`) × 10 appareils = 615 combinaisons. Appareils : Galaxy S9+ (320 px),
+Galaxy S8 (360), iPhone SE (375), iPhone 13 (390), Pixel 7 (412), iPhone 14 Pro Max (430), iPhone 13 en paysage,
+iPad Mini (768), iPad Mini en paysage (1024), ordinateur (1366 px, souris).
 
 ## Résultat
 
-| | Avant | Après |
+| Mesure | Avant | Après |
 |---|---|---|
-| Débordement horizontal de la page | 2 pages | 0 |
-| Champs en 14 px (Safari iOS zoome au focus) | 36 états sur 45 | 0 |
-| Cibles tactiles < 44 px | 42 états sur 45 | 2 types d'éléments, acceptés (voir plus bas) |
-| Panneau qui masque le contenu | 1 (plan de salle en paysage) | 0 |
-| Erreurs JavaScript ou requêtes en échec | 0 | 0 |
+| Débordement horizontal de la page | 0 | 0 |
+| Champs sous 16 px sur écran tactile | 1 état (éditeur de plan) | 0 |
+| Élément recouvert | 0 | 0 |
+| Erreurs JavaScript / requêtes en échec | 0 | 0 |
+| Cibles tactiles < 24 px | 108 états | 0 |
+| Cibles tactiles 24 à 43 px | 21 états | 30 états, tous acceptés (voir plus bas) |
+| États en défaut | 129 / 615 | 30 / 615 (acceptés) |
 
-### Tableau page × appareil (passage final)
-
-OK partout, sauf les 2 cas acceptés plus bas :
-
-| Page | 320 | 360 | 375 | 390 | 412 | 430 | paysage | iPad |
-|---|---|---|---|---|---|---|---|---|
-| services, services-day (calendrier) | KO* | KO* | KO* | OK | OK | OK | OK | OK |
-| seating-plan (plan de salle) | KO* | KO* | KO* | KO* | KO* | KO* | OK | OK |
-| les 43 autres états | OK | OK | OK | OK | OK | OK | OK | OK |
-
-\* Seul défaut restant : cible tactile entre 35 et 43 px, accepté (voir plus bas).
+Ordinateur (1366 px) : OK sur les 60 états (les deux menus de téléphone ne s'y affichent pas).
 
 ## Défauts trouvés et corrections
 
 | # | Page(s) | Appareils | Élément | Mesure avant | Correction |
 |---|---|---|---|---|---|
-| 1 | mikve-admin | 320 à 390 px | horaires d'ouverture (`input[type=time]` + « Retirer ») | page large de 434 px sur 320 px | ligne qui passe à la ligne : les deux heures sur une ligne, « Retirer » en dessous (`flex-wrap`, champs `flex-1`) |
-| 2 | admin, onglet Paiements | 320 px | statut « Configuré / Manquant » | page large de 347 px | `gap-3`, libellé `min-w-0 break-words`, statut `shrink-0` |
-| 3 | tous les formulaires | tous les écrans tactiles | `.input` (input, select, textarea) | police de 14 px | 16 px sur écran tactile (`@media (pointer: coarse)` dans `globals.css`), 14 px inchangé à la souris |
-| 4 | toutes les pages | écrans tactiles | `.btn`, `.chip` | 36 px de haut | `min-height: 44px` sur écran tactile |
-| 5 | 20 pages | écrans tactiles | liens et boutons d'action en texte (Copier le lien, QR code, Voir, PDF, Supprimer, Retirer, Annuler, Envoyer, + Plage, + Ajouter, Valider l'entrée, ← Retour…) | 16 à 20 px de haut | classe `tap` (44 × 44 px minimum sur écran tactile) |
-| 6 | admin, trésorerie, messages | écrans tactiles | onglets et pastilles de filtre | 30 à 38 px | classe `tap` |
-| 7 | 10 pages | écrans tactiles | cases à cocher (le libellé est la cible) | 20 px | classe `tap` sur le `label` |
-| 8 | menu mobile | téléphones | bouton ☰ (38 px), croix de fermeture (28 px), liens du tiroir (40 px), Déconnexion (36 px) | | 44 px |
-| 9 | tableau de bord | tous | actions des cartes (Traiter, Relancer, Gérer, Consulter : 16 px), « Voir tout l'historique » (29 px) | | `tap` et hauteur 44 px |
-| 10 | promesses, encaissements, plan de salle | tous | suggestions de la recherche de fidèle | 36 px | `py-3` |
-| 11 | mikve (public) | tous | créneaux horaires | 38 px | `py-3` |
-| 12 | offices | tous | offices du jour sélectionné | 36 px | `py-3` |
-| 13 | plan de salle | paysage | panneau d'attribution collant | recouvrait les places quand l'écran fait moins de 560 px de haut | collant seulement sur les écrans d'au moins 560 px de haut ; places en 44 × 44 px à partir de 640 px de large |
-| 14 | espace fidèle, fiche fidèle | ≤ 390 px | n° de reçu fiscal | coupé (« N° 2026/00… ») | la ligne passe à la ligne au lieu de tronquer |
-| 15 | toutes les pages pleine hauteur | téléphones | `min-h-screen` (100vh) | trop haut quand la barre d'adresse est visible | `100dvh`, avec 100vh en repli |
+| 1 | tout le portail public (12 pages) | tactiles | bandeau du haut : téléphone et adresse | 16 px de haut | classe `tap` (44 px), marge du bandeau retirée sur écran tactile pour garder sa hauteur |
+| 2 | /places (public), plan de salle dessiné (back-office) | tactiles | places du plan | 15 à 23 px | le plan s'ouvre agrandi sur écran tactile (places de 36 × 28 px), centré sur la téva, et défile dans son cadre ; boutons − / + (jusqu'à 48 px par place) / vue d'ensemble, en 44 px. Ordinateur inchangé (plan ajusté à la largeur). `RoomPlanView.tsx` |
+| 3 | éditeur de plan (iframe) | tactiles | boutons (34 à 40 px), champs (14 px, 36 px de haut) | | `@media (pointer:coarse)` dans `public/plan-editor.html` : boutons et champs 44 px, champs 16 px |
+| 4 | espace fidèle, « Mes coordonnées » | ≤ 430 px | texte coincé à côté de « Modifier » | colonne de 140 px, e-mail coupé en 4 lignes | bouton sous le texte sur téléphone (`flex-col sm:flex-row`) |
+| 5 | /confidentialite | ≤ 639 px | tableau des traitements (560 px) | défilement horizontal, 2 colonnes sur 4 visibles | une fiche par traitement sur téléphone, tableau à partir de 640 px |
 
-À la demande de mikhael, aussi dans cette PR : sur ordinateur, la barre de défilement du rail d'icônes est masquée
-(le défilement reste possible) et le rail s'élargit au survol pour afficher le nom des menus, par-dessus le
-contenu, sans décaler la page.
+Vérifié sans défaut : tableau de bord, fidèles, promesses, encaissements, trésorerie, reçus, cotisations, campagnes,
+messages, offices, événements, hazkarot, mikvé, catalogue, Administration (8 onglets), Kiddouch & salons, menu du
+portail, espace fidèle, pages publiques de don, billet, louah.
 
 ## Défauts non corrigés (acceptés)
 
-- **Calendrier des offices, cases des jours** : 35 à 43 px de large sur les écrans de 320 à 375 px (56 px de haut).
-  Sept colonnes de 44 px ne tiennent pas dans la largeur. Les cases dépassent le minimum WCAG 2.2 AA (24 px).
-- **Plan de salle, places** : 36 × 36 px sur téléphone en portrait. Le plan défile déjà horizontalement
-  dans sa carte (12 places par rang) ; passer à 44 px allongerait ce défilement de 20 %. Les places restent
-  au-dessus du minimum WCAG 2.2 AA (24 px). En paysage et sur tablette, elles font 44 px.
+- **Places du plan dessiné sur tactile** : 36 × 28 px par défaut (plus de 24 px, minimum WCAG 2.2 AA). À 44 px, le plan
+  ferait 1 500 px de large sur un téléphone de 375 px ; le bouton + y mène pour qui le souhaite.
+- **Plan en grille (ancien format)** : places de 36 × 36 px sur téléphone (déjà accepté le 23 octobre).
+- **Calendrier des offices** : cases de 41 px de large de 320 à 375 px (sept colonnes ; déjà accepté).
 
 ## Boutons non cliqués
 
-Toutes les routes `/api` sont simulées (`fixtures.cjs`) et toute requête autre que GET est refusée : aucune
-action ne peut avoir d'effet. Ces boutons ont été mesurés (taille, position, recouvrement), mais pas cliqués,
-parce qu'ils suppriment des données, envoient un e-mail ou lancent un paiement : Supprimer, Annuler (reçu,
-réservation), Libérer, Relancer, Envoyer (message, relevé, reçu), Émettre, Appeler les cotisations, Donner,
-Payer, Réserver, Recevoir mon lien, Se connecter, Déconnexion, tous les « Enregistrer » et « Créer ».
+Paiement (Continuer vers le paiement, Régler, Payer), envoi de formulaires (parrainage, demande de salon, réservation,
+coordonnées, réglages du portail et du kiddouch), Confirmer / Refuser / Libérer, Supprimer le plan, Enregistrer de
+l'éditeur : effets réels. Leur taille et leur position sont mesurées, ils ne sont pas cliqués. Le formulaire /salons
+n'a pas pu être affiché (réglages lus côté serveur, base absente en local) : il utilise les mêmes champs `.input`.
 
 ## Limites
 
-- Chromium seulement : WebKit n'est pas installé dans l'environnement d'audit. Le Safari iOS réel n'est donc
-  pas couvert (rendu des champs date et heure, barre d'adresse dynamique).
-- Les vraies barres du navigateur, le clavier virtuel et les encoches (safe areas) ne sont pas simulés.
-- Données fictives : des listes réelles plus longues ne changent pas la mise en page (une ligne par élément),
-  mais des textes inattendus pourraient.
-- Les champs d'heure s'affichent en AM/PM dans le Chromium de l'audit (paramètres régionaux du système). Sur un
-  téléphone réglé en français, ils sont en 24 h, donc plus étroits.
+Émulation Chromium : ni vrai iPhone, ni barres réelles du navigateur, ni clavier virtuel.
 
-## Relancer l'audit
+## Relancer
 
-```bash
-npm run build && npm run start   # dans un premier terminal
-NODE_PATH=$(npm root -g) node qa-mobile/audit.cjs   # dans un second, playwright installé globalement
-# ou : npm i -g playwright && npx playwright install chromium
 ```
-
-Options : `ONLY=dashboard,don` pour quelques pages, `NO_SHOTS=1` sans captures, `BASE_URL=…` pour une autre adresse.
-Les résultats bruts sont dans `qa-mobile/results.json` et les captures dans `qa-mobile/screenshots/<appareil>/<page>.png`
-(les deux sont ignorés par git).
+npm run build && npm run start
+NODE_PATH=$(npm root -g) node qa-mobile/audit.cjs
+# options : ONLY=portail-places,seating-dessine  DEVICES=iphone-se,ordinateur  NO_SHOTS=1  RESULTS=fichier.json
+```

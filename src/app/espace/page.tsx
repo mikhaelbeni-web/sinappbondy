@@ -282,7 +282,7 @@ function AddressForm({ donor, onSaved }: { donor: any; onSaved: () => void }) {
 
   return (
     <div className="card p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-semibold text-ink">Mes coordonnées</h2>
           <p className="text-sm text-gray-600 break-words">
@@ -291,7 +291,7 @@ function AddressForm({ donor, onSaved }: { donor: any; onSaved: () => void }) {
           <p className="text-sm text-gray-600 break-words">{donor.email}{donor.phone ? ` · ${donor.phone}` : ""}</p>
         </div>
         {!open && (
-          <button type="button" className="btn-secondary shrink-0" onClick={() => setOpen(true)}>Modifier</button>
+          <button type="button" className="btn-secondary shrink-0 self-start" onClick={() => setOpen(true)}>Modifier</button>
         )}
       </div>
       {msg && <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.text}</p>}

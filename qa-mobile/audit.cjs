@@ -28,6 +28,9 @@ const DEVICES = [
   ["iphone-14-pro-max", devices["iPhone 14 Pro Max"]], // 430 px
   ["iphone-13-paysage", devices["iPhone 13 landscape"]],
   ["ipad-mini", devices["iPad Mini"]],
+  ["ipad-mini-paysage", devices["iPad Mini landscape"]], // 1024 px
+  // Ordinateur à la souris : pas d'exigence de 44 px ni de police 16 px.
+  ["ordinateur", { viewport: { width: 1366, height: 800 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false, userAgent: devices["Desktop Chrome"].userAgent }],
 ].map(([name, d]) => [name, { ...d, defaultBrowserType: undefined }]);
 
 // États à auditer. `steps` ouvre un état (menu, formulaire, onglet) par des
@@ -68,11 +71,11 @@ const PAGES = [
   { name: "mikve-admin", url: "/mikve-reservations" },
   { name: "catalog", url: "/catalog" },
   { name: "admin-postes", url: "/admin", steps: [click("text=+ Nouveau poste")] },
-  { name: "admin-equipe", url: "/admin", steps: [click("button:has-text('Équipe')"), click("text=+ Nouveau membre")] },
-  { name: "admin-association", url: "/admin", steps: [click("button:has-text('Association & reçus fiscaux')")] },
-  { name: "admin-relances", url: "/admin", steps: [click("button:has-text('Relances automatiques')")] },
-  { name: "admin-paiements", url: "/admin", steps: [click("button:has-text('Paiements')")] },
-  { name: "admin-louah", url: "/admin", steps: [click("button:has-text('Écran louah')")] },
+  { name: "admin-equipe", url: "/admin?onglet=equipe", steps: [click("text=+ Nouveau membre")] },
+  { name: "admin-association", url: "/admin?onglet=association" },
+  { name: "admin-relances", url: "/admin?onglet=relances" },
+  { name: "admin-paiements", url: "/admin?onglet=paiements" },
+  { name: "admin-louah", url: "/admin?onglet=louah" },
   { name: "don", url: "/don", anon: true },
   { name: "don-campagne", url: "/don/renovation-du-heikhal", anon: true },
   { name: "espace-connexion", url: "/espace", anon: true },
@@ -82,6 +85,25 @@ const PAGES = [
   { name: "mikve", url: "/mikve", anon: true, steps: [click("button:has-text('19h30')")] },
   { name: "louah", url: "/louah", anon: true },
   { name: "merci", url: "/merci", anon: true },
+  // Portail public des fidèles
+  { name: "portail-accueil", url: "/", anon: true },
+  { name: "portail-menu", url: "/", anon: true, mobileOnly: true, maxWidth: 1024, steps: [click('button[aria-label="Ouvrir le menu"]')] },
+  { name: "portail-horaires", url: "/horaires", anon: true },
+  { name: "portail-places", url: "/places", anon: true, steps: [click('svg [role=button][aria-label*="libre" i]')] },
+  { name: "portail-places-formulaire", url: "/places", anon: true, steps: [click('svg [role=button][aria-label*="libre" i]'), click("button:has-text('Continuer')")] },
+  { name: "portail-kiddouch", url: "/kiddouch", anon: true, steps: [click("button:has-text('Vayetse')"), click("button:has-text('Séouda chlichit')")] },
+  { name: "portail-salons", url: "/salons", anon: true },
+  { name: "portail-galerie", url: "/galerie", anon: true },
+  { name: "portail-a-propos", url: "/a-propos", anon: true },
+  { name: "portail-communaute", url: "/communaute", anon: true },
+  { name: "portail-mentions", url: "/mentions-legales", anon: true },
+  { name: "portail-confidentialite", url: "/confidentialite", anon: true },
+  // Back-office ajouté depuis le premier audit
+  { name: "seating-dessine", url: "/seating/pl2", steps: [click('svg [role=button]')] },
+  { name: "plan-editeur", url: "/seating/pl2", frame: /plan-editor\.html/, steps: [click("button:has-text('Modifier le plan de salle')"), async (p) => { await p.waitForTimeout(1000); }] },
+  { name: "kiddouch-salons", url: "/kiddouch-salons" },
+  { name: "admin-journal", url: "/admin?onglet=journal" },
+  { name: "admin-portail", url: "/admin?onglet=portail" },
 ];
 
 async function mockApi(page, { anon, donor }) {
@@ -107,8 +129,8 @@ async function mockApi(page, { anon, donor }) {
 // `deviceWidth` : largeur de l'appareil. Sur mobile, le navigateur élargit
 // window.innerWidth quand la page déborde (il dézoome) : on ne peut donc pas
 // s'y fier pour détecter le débordement.
-async function measure(page, deviceWidth) {
-  return page.evaluate(async (deviceWidth) => {
+async function measure(page, deviceWidth, touch) {
+  return page.evaluate(async ({ deviceWidth, touch }) => {
     const vw = deviceWidth;
     const issues = [];
     const sel = (el) => {
@@ -123,6 +145,8 @@ async function measure(page, deviceWidth) {
     const visible = (el) => {
       const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
+      // Lien d'évitement « Aller au contenu » : invisible tant qu'il n'a pas le focus clavier.
+      if (cs.clip === "rect(0px, 0px, 0px, 0px)" || (cs.position === "absolute" && el.getBoundingClientRect().width <= 1)) return false;
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0;
     };
@@ -157,7 +181,9 @@ async function measure(page, deviceWidth) {
     // b. Éléments interactifs
     // Tiroir mobile ouvert : la page est volontairement masquée, seul le
     // tiroir est audité.
-    const openDrawer = [...document.querySelectorAll("aside")].find((a) => getComputedStyle(a).position === "fixed" && a.getBoundingClientRect().right > 0);
+    const openDrawer =
+      [...document.querySelectorAll("aside")].find((a) => getComputedStyle(a).position === "fixed" && a.getBoundingClientRect().right > 0) ||
+      document.querySelector("#menu-portail");
     const interactive = [...document.querySelectorAll("button, a[href], input, select, textarea, [role=button]")].filter(
       (el) => visible(el) && !inHiddenDrawer(el) && el.type !== "hidden" && (!openDrawer || openDrawer.contains(el))
     );
@@ -168,7 +194,7 @@ async function measure(page, deviceWidth) {
       const sp = scrollParentX(el);
       if (!sp && (r.left < -1 || r.right > vw + 1)) issues.push({ check: "b-hors-ecran", detail: `x ${Math.round(r.left)}→${Math.round(r.right)}`, selectors: [sel(el)] });
       const inlineLink = el.tagName === "A" && el.parentElement && /^(P|SPAN|LI)$/.test(el.parentElement.tagName) && el.parentElement.childNodes.length > 1 && getComputedStyle(el).display === "inline";
-      if ((r.width < 44 || r.height < 44) && !inlineLink) {
+      if (touch && (r.width < 44 || r.height < 44) && !inlineLink) {
         issues.push({ check: r.width < 24 || r.height < 24 ? "b-cible-<24" : "b-cible-<44", detail: `${Math.round(r.width)}×${Math.round(r.height)}`, selectors: [sel(target)] });
       }
     }
@@ -194,7 +220,7 @@ async function measure(page, deviceWidth) {
     for (const el of document.querySelectorAll("input, select, textarea")) {
       if (!visible(el) || ["checkbox", "radio", "file", "hidden"].includes(el.type)) continue;
       const fs = parseFloat(getComputedStyle(el).fontSize);
-      if (fs < 16) issues.push({ check: "c-police-champ", detail: `${fs}px`, selectors: [sel(el)] });
+      if (touch && fs < 16) issues.push({ check: "c-police-champ", detail: `${fs}px`, selectors: [sel(el)] });
     }
     // c. Texte coupé sans intention (overflow hidden sans ellipsis)
     for (const el of document.body.querySelectorAll("*")) {
@@ -205,7 +231,7 @@ async function measure(page, deviceWidth) {
       }
     }
     return issues;
-  }, deviceWidth);
+  }, { deviceWidth, touch });
 }
 
 async function run() {
@@ -215,7 +241,8 @@ async function run() {
   for (const [devName, dev] of DEVICES) {
     for (const pg of PAGES) {
       if (only && !only.split(",").includes(pg.name)) continue;
-      if (pg.mobileOnly && dev.viewport.width >= 768) continue;
+      if (pg.mobileOnly && dev.viewport.width >= (pg.maxWidth || 768)) continue;
+      if (process.env.DEVICES && !process.env.DEVICES.split(",").includes(devName)) continue;
       const ctx = await browser.newContext({ ...dev, locale: "fr-FR", timezoneId: "Europe/Paris" });
       const page = await ctx.newPage();
       const errors = [];
@@ -230,7 +257,10 @@ async function run() {
         await page.goto(BASE + pg.url, { waitUntil: "networkidle" });
         await page.waitForTimeout(300);
         for (const step of pg.steps || []) await step(page);
-        issues = await measure(page, dev.viewport.width);
+        // Éditeur de plan : plein écran dans une iframe, seul son contenu est mesuré.
+        const target = pg.frame ? page.frames().find((f) => pg.frame.test(f.url())) : page;
+        if (!target) throw new Error("iframe introuvable");
+        issues = await measure(target, dev.viewport.width, !!dev.hasTouch);
         if (SHOTS) {
           const dir = path.join(OUT, "screenshots", devName);
           fs.mkdirSync(dir, { recursive: true });
@@ -246,7 +276,7 @@ async function run() {
     }
   }
   await browser.close();
-  fs.writeFileSync(path.join(OUT, "results.json"), JSON.stringify(results, null, 2));
+  fs.writeFileSync(process.env.RESULTS || path.join(OUT, "results.json"), JSON.stringify(results, null, 2));
 }
 
 run().catch((e) => {

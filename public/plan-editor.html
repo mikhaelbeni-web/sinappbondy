@@ -74,6 +74,13 @@ input[type=number],input[type=text],select{font:inherit;font-size:14px;color:var
   .hint{display:none}
   header h1 small{display:none}
 }
+/* Écran tactile : cibles de 44 px et champs en 16 px (sinon Safari iOS zoome au focus). */
+@media (pointer:coarse){
+  button,.btn{min-height:44px;min-width:44px;justify-content:center}
+  .zoom button,.cnt button{width:44px;height:44px}
+  input[type=number],input[type=text],select{font-size:16px;min-height:44px}
+  textarea{font-size:16px}
+}
 @media (prefers-reduced-motion:no-preference){button{transition:background .15s}}
 </style>
 </head>
@@ -318,7 +325,7 @@ function renderInsp(){
   if(!sel){
     o+=`<div class="sec"><h2>${esc(S.name)}</h2><label for="iName">Nom du plan<input type="text" id="iName" value="${esc(S.name)}"></label></div>`;
     o+=`<div class="sec"><h3>Taille des places (toutes les rangées)</h3><div class="f f3">${num("sW","Largeur",S.seat.w,8)}${num("sD","Profondeur",S.seat.d,8)}${num("sG","Espace",S.seat.gap,0)}</div><p class="note">La largeur se mesure le long de la rangée. Une rangée peut avoir sa propre taille : touchez-la.</p></div>`;
-    o+=`<div class="sec"><h3>Tarifs (sections)</h3>${S.sections.map((s,i)=>`<div class="f" style="grid-template-columns:1fr 90px 40px;align-items:end"><label for="secN${i}">Nom<input type="text" id="secN${i}" value="${esc(s.name)}" maxlength="40"></label><label for="secP${i}">Prix (€)<input type="number" id="secP${i}" value="${s.price}" min="0" step="1"></label><button id="secD${i}" aria-label="Supprimer le tarif ${esc(s.name)}" ${S.sections.length<2||S.rows.some(r=>r.sectionId===s.id)?"disabled":""} style="padding:0;justify-content:center;border:1px solid var(--trait)">×</button></div>`).join("")}<div class="acts"><button id="secAdd">+ Tarif</button></div><p class="note">Chaque rangée suit un tarif (par exemple Hommes, Femmes). Touchez une rangée pour choisir le sien.</p></div>`;
+    o+=`<div class="sec"><h3>Tarifs (sections)</h3>${S.sections.map((s,i)=>`<div class="f" style="grid-template-columns:1fr 90px 44px;align-items:end"><label for="secN${i}">Nom<input type="text" id="secN${i}" value="${esc(s.name)}" maxlength="40"></label><label for="secP${i}">Prix (€)<input type="number" id="secP${i}" value="${s.price}" min="0" step="1"></label><button id="secD${i}" aria-label="Supprimer le tarif ${esc(s.name)}" ${S.sections.length<2||S.rows.some(r=>r.sectionId===s.id)?"disabled":""} style="padding:0;justify-content:center;border:1px solid var(--trait)">×</button></div>`).join("")}<div class="acts"><button id="secAdd">+ Tarif</button></div><p class="note">Chaque rangée suit un tarif (par exemple Hommes, Femmes). Touchez une rangée pour choisir le sien.</p></div>`;
     o+=addSec();
     o+=warnSec();
     o+=`<div class="sec"><h3>Mode d'emploi</h3><p class="note">Touchez une rangée, un élément ou un mur pour le modifier. Touchez une place pour la supprimer ou la rétablir. Le plan est enregistré dans ce navigateur. Pour le garder ou l'envoyer, utilisez « Exporter / importer ».</p></div>`;

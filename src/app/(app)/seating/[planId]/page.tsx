@@ -349,9 +349,7 @@ export default function SeatingPlanPage() {
             ))}
           </div>
           {plan.layout ? (
-            <div className="overflow-x-auto">
-              <RoomPlanView layout={plan.layout} look={lookOf} onSeat={(s) => click(s.sectionId, s.rowNum, s.k + 1)} />
-            </div>
+            <RoomPlanView layout={plan.layout} look={lookOf} onSeat={(s) => click(s.sectionId, s.rowNum, s.k + 1)} />
           ) : (
             <div className="text-sm text-gray-600 space-y-2">
               <p>Ce plan n'est pas encore dessiné.</p>

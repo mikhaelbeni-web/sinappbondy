@@ -50,6 +50,26 @@ Compte : administrateur fictif (toutes permissions), servi par `/api/me` simulé
 | mikve | /mikve | visiteur | choix d'un créneau |
 | louah | /louah | visiteur | |
 | merci | /merci | visiteur | |
+| portail-accueil | / | visiteur | |
+| portail-menu | / | visiteur | ouverture du menu (écrans < 1024 px) |
+| portail-horaires | /horaires | visiteur | |
+| portail-places | /places | visiteur | sélection d'une place libre |
+| portail-places-formulaire | /places | visiteur | sélection d'une place, « Continuer » |
+| portail-kiddouch | /kiddouch | visiteur | choix d'un Chabbat et d'une formule |
+| portail-salons | /salons | visiteur | |
+| portail-galerie | /galerie | visiteur | |
+| portail-a-propos | /a-propos | visiteur | |
+| portail-communaute | /communaute | visiteur | |
+| portail-mentions | /mentions-legales | visiteur | |
+| portail-confidentialite | /confidentialite | visiteur | |
+| seating-dessine | /seating/pl2 | admin | plan dessiné, clic sur une place |
+| plan-editeur | /seating/pl2 | admin | « Modifier le plan de salle » (éditeur en iframe, mesuré à l'intérieur) |
+| kiddouch-salons | /kiddouch-salons | admin | |
+| admin-journal | /admin?onglet=journal | admin | |
+| admin-portail | /admin?onglet=portail | admin | |
 
 Appareils : Galaxy S9+ (320 px), Galaxy S8 (360 px), iPhone SE (375 px), iPhone 13 (390 px), Pixel 7 (412 px),
-iPhone 14 Pro Max (430 px), iPhone 13 en paysage, iPad Mini (768 px).
+iPhone 14 Pro Max (430 px), iPhone 13 en paysage, iPad Mini (768 px), iPad Mini en paysage (1024 px),
+ordinateur à la souris (1366 px : débordement, recouvrement et console seulement).
+
+Les onglets d'Administration s'ouvrent par l'adresse (`/admin?onglet=…`) : sur téléphone ils sont dans une liste déroulante.

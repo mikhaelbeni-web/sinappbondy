@@ -14,13 +14,13 @@ export default function PortalShell({ portal, children }: { portal: PortalSettin
     <div className="theme-portail min-h-screen bg-cream flex flex-col">
       {/* Barre de contact, au-dessus de la navigation. */}
       <div className="bg-ink-dark text-white/85 text-xs">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap gap-x-5 gap-y-1">
+        <div className="max-w-6xl mx-auto px-4 py-2 [@media(pointer:coarse)]:py-0 flex flex-wrap gap-x-5 gap-y-1">
           {portal.phone && (
-            <a href={telHref(portal.phone)} className="inline-flex items-center gap-1.5 hover:text-white">
+            <a href={telHref(portal.phone)} className="tap inline-flex items-center gap-1.5 hover:text-white">
               <Phone className="w-3.5 h-3.5" aria-hidden /> {portal.phone}
             </a>
           )}
-          <a href={mapUrl(portal)} target="_blank" rel="noreferrer" className="hidden sm:inline-flex items-center gap-1.5 hover:text-white">
+          <a href={mapUrl(portal)} target="_blank" rel="noreferrer" className="tap hidden sm:inline-flex items-center gap-1.5 hover:text-white">
             <MapPin className="w-3.5 h-3.5" aria-hidden /> {fullAddress(portal)}
           </a>
         </div>
